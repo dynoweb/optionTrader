@@ -1,19 +1,17 @@
 package trade;
 
+import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 
+import misc.Utils;
 import model.Spx;
-import model.Trade;
+import model.service.SpxService;
 import model.service.TradeService;
 
 public class OpenTrade {
 	
-	private static int qty = 1;
 
-	public OpenTrade() {
-		
-	}
-	
 //	public void addTrade(Date tradeDate) {
 //		
 //		EntityManager em = emf.createEntityManager();
@@ -79,7 +77,41 @@ public class OpenTrade {
 //		return true;
 //	}
 
-	public static void openIronCondor(List<Spx> spxCallChain, List<Spx> spxPutChain, int contracts) {
+	public static void findIronCondorChains(Date tradeDate, Date expiration) {
+		
+		String callPut;
+		SpxService spxService = new SpxService();
+		callPut = "C";
+		List<Spx> spxCallChain = spxService.getOptionChain(tradeDate, expiration, callPut);
+		
+		if (spxCallChain.isEmpty()) {
+			
+			Calendar expirationDateCal = Calendar.getInstance();
+			expirationDateCal.clear();		    	
+			expirationDateCal.setTime(expiration);
+			expirationDateCal.add(Calendar.DATE, 1);
+			expiration = expirationDateCal.getTime();
+			
+		    System.out.println("checking: tradeDate: "  + Utils.asMMMddYYYY(tradeDate) 
+					+ " expiration: " + Utils.asMMMddYYYY(expiration));
+			spxCallChain = spxService.getOptionChain(tradeDate, expiration, callPut);
+		}
+		
+//		    for (Spx spx : spxCallChain) {
+//				
+//		    	System.out.println("runBackTest: tradeDate: "  + ProjectProperties.dateFormat.format(spx.getTrade_date()) 
+//		    			+ " expiration: " + ProjectProperties.dateFormat.format(spx.getExpiration()) + " Delta: " + spx.getDelta());
+//			}
+		
+		if (!spxCallChain.isEmpty()) {
+		    callPut = "P";
+		    List<Spx> spxPutChain = spxService.getOptionChain(tradeDate, expiration, callPut);
+		    openIronCondor(spxCallChain, spxPutChain);
+		}
+	}
+	
+	
+	public static void openIronCondor(List<Spx> spxCallChain, List<Spx> spxPutChain) {
 		
 		VerticalSpread callSpread = openCallSpread(spxCallChain);
 		VerticalSpread putSpread = openPutSpread(spxPutChain);
@@ -88,7 +120,7 @@ public class OpenTrade {
 		ironCondor.setCallSpread(callSpread);
 		ironCondor.setPutSpread(putSpread);
 		
-    	TradeService.openIronCondor(ironCondor, contracts);
+    	TradeService.openIronCondor(ironCondor);
 	}
 	
 	private static VerticalSpread openPutSpread(List<Spx> spxPutChain) {
@@ -118,8 +150,8 @@ public class OpenTrade {
 		}
 		
 		VerticalSpread putSpread = new VerticalSpread();
-		putSpread.setLongOptionOpen(spxLongPut, qty);
-		putSpread.setShortOptionOpen(spxShortPut, qty );
+		putSpread.setLongOptionOpen(spxLongPut);
+		putSpread.setShortOptionOpen(spxShortPut);
 
 		return putSpread;
 	}
@@ -152,8 +184,8 @@ public class OpenTrade {
 		}
 		
 		VerticalSpread callSpread = new VerticalSpread();
-		callSpread.setLongOptionOpen(spxLongCall, qty);
-		callSpread.setShortOptionOpen(spxShortCall, qty);
+		callSpread.setLongOptionOpen(spxLongCall);
+		callSpread.setShortOptionOpen(spxShortCall);
 
 		return callSpread;
 	}

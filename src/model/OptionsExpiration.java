@@ -4,7 +4,7 @@ import java.io.Serializable;
 
 import javax.persistence.*;
 
-import misc.ProjectProperties;
+import misc.Utils;
 
 import java.util.Date;
 
@@ -56,7 +56,7 @@ public class OptionsExpiration implements Serializable {
 	
 	public String toString() {
 		
-		return "OptionsExpiration: " + symbol + " " + ProjectProperties.dateFormat.format(expiration);
+		return "OptionsExpiration: " + symbol + " " + Utils.asMMMddYYYY(expiration);
 	}
 
 }

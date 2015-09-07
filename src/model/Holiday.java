@@ -4,7 +4,7 @@ import java.io.Serializable;
 
 import javax.persistence.*;
 
-import misc.ProjectProperties;
+import misc.Utils;
 
 import java.util.Date;
 
@@ -45,7 +45,7 @@ public class Holiday implements Serializable {
 	
 	public String toString() {
 		
-		return "Holiday: " + ProjectProperties.dateFormat.format(holiday) + " " + name;
+		return "Holiday: " + Utils.asMMMddYYYY(holiday) + " " + name;
 	}
 
 }

@@ -9,6 +9,7 @@ import javax.persistence.EntityManagerFactory;
 import javax.persistence.Persistence;
 
 import trade.IronCondor;
+import trade.TradeProperties;
 import trade.VerticalSpread;
 import misc.Utils;
 import model.Spx;
@@ -27,65 +28,51 @@ public class TradeService {
 //		em.getTransaction().commit();
 //	}
 
-	public static void openIronCondor(IronCondor ironCondor, int contracts) {
-		
+	public static void openIronCondor(IronCondor ironCondor) { 
+			
 		Trade trade = new Trade();
-		TradeDetail shortCall = new TradeDetail(); 
+		int contracts = TradeProperties.CONTRACTS;
 		
 		VerticalSpread callSpread = ironCondor.getCallSpread();
 		VerticalSpread putSpread = ironCondor.getPutSpread();
 		
-//		TradeDetail shortCall = initializeTradeDetail(callSpread.getShortOptionOpen(), -contracts, "OPENING", "SELL");
-//		TradeDetail longCall = initializeTradeDetail(callSpread.getLongOptionOpen(), contracts, "OPENING", "BUY");
-//		TradeDetail shortPut = initializeTradeDetail(putSpread.getShortOptionOpen(), -contracts, "OPENING", "SELL");
-//		TradeDetail longPut = initializeTradeDetail(putSpread.getLongOptionOpen(), contracts, "OPENING", "BUY");
+		TradeDetail shortCall = initializeTradeDetail(callSpread.getShortOptionOpen(), -contracts, "OPENING", "SELL");
+		TradeDetail longCall = initializeTradeDetail(callSpread.getLongOptionOpen(), contracts, "OPENING", "BUY");
+		TradeDetail shortPut = initializeTradeDetail(putSpread.getShortOptionOpen(), -contracts, "OPENING", "SELL");
+		TradeDetail longPut = initializeTradeDetail(putSpread.getLongOptionOpen(), contracts, "OPENING", "BUY");
 		
-		trade.setExecTime(new Date()); //shortCall.getExecTime());
-		trade.setExp(new Date()); // shortCall.getExp());
+		trade.setExecTime(shortCall.getExecTime());
+		trade.setExp(shortCall.getExp());
 		trade.setTradeType("IRON CONDOR");
 		
-		double openingCost = 0.00;
-//		         Utils.round(shortCall.getPrice() * shortCall.getQty() + longCall.getPrice() * longCall.getQty() +
-//				 shortPut.getPrice() * shortPut.getQty() + longPut.getPrice() * longPut.getQty(), 2);
+		double openingCost = Utils.round(shortCall.getPrice() * shortCall.getQty() + longCall.getPrice() * longCall.getQty() +
+				 shortPut.getPrice() * shortPut.getQty() + longPut.getPrice() * longPut.getQty(), 2);
 		trade.setOpeningCost(openingCost);
 
-//		List<TradeDetail> tradeDetails = new ArrayList<TradeDetail>();
-		
-		
-		//trade.setTradeDetails(tradeDetails);
-		
 		EntityManagerFactory emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
 		EntityManager em = emf.createEntityManager();
 		
 		em.getTransaction().begin();		
-		em.persist(trade);		
-		em.getTransaction().commit();
-
-//		em.refresh(trade);
-//		
-		em.getTransaction().begin();
-//		shortCall = initializeTradeDetail(callSpread.getShortOptionOpen(), -contracts, "OPENING", "SELL");
-		initializeTradeDetail(callSpread.getShortOptionOpen(), -contracts, "OPENING", "SELL", shortCall);
+		em.persist(trade);
+		
 		shortCall.setTrade(trade);
 		em.persist(shortCall);
+		
+		longCall.setTrade(trade);
+		em.persist(longCall);
+		
+		shortPut.setTrade(trade);
+		em.persist(shortPut);
+		
+		longPut.setTrade(trade);
+		em.persist(longPut);
+		
 		em.getTransaction().commit();
-		
-//		trade.setTradeDetails(tradeDetails);
-		
-//		trade.addTradeDetail(shortCall);
-//		trade.addTradeDetail(longCall);
-//		trade.addTradeDetail(shortPut);
-//		trade.addTradeDetail(longPut);
-		
-//		trade.setTradeDetails(tradeDetails);
-		
-//		em.persist(trade);
-		
 	}
 	
-	private static void initializeTradeDetail(Spx spx, int contracts, String posEffect, String side, TradeDetail tradeDetail) {
+	private static TradeDetail initializeTradeDetail(Spx spx, int contracts, String posEffect, String side) {
 		
-//		TradeDetail tradeDetail = new TradeDetail();
+		TradeDetail tradeDetail = new TradeDetail();
 		
 		tradeDetail.setExecTime(spx.getTrade_date());
 		tradeDetail.setExp(spx.getExpiration());
@@ -103,7 +90,7 @@ public class TradeService {
 //		TradeService tradeService = new TradeService();
 //		tradeService.addTrade(trade);		
 //
-//		return tradeDetail;
+		return tradeDetail;
 	}
 	
 }

@@ -1,10 +1,7 @@
 package trade;
 
-import misc.ProjectProperties;
+import misc.Utils;
 import model.Spx;
-import model.Trade;
-import model.TradeDetail;
-import model.service.TradeService;
 
 /**
  * A straddle has two legs, one put and one call.
@@ -51,7 +48,7 @@ public class VerticalSpread {
 		return longOptionOpen;
 	}
 	
-	public void setLongOptionOpen(Spx longOptionOpen, int qty) {
+	public void setLongOptionOpen(Spx longOptionOpen) {
 		this.longOptionOpen = longOptionOpen;
 	}
 	
@@ -65,18 +62,18 @@ public class VerticalSpread {
 		return shortOptionOpen;
 	}
 	
-	public void setShortOptionOpen(Spx shortOptionOpen, int qty) {
+	public void setShortOptionOpen(Spx shortOptionOpen) {
 		this.shortOptionOpen = shortOptionOpen;
 	}
 	
 	public String toString() {
 		if (longOptionOpen != null && shortOptionOpen != null) {
-			return ProjectProperties.dateFormat.format(longOptionOpen.getTrade_date()) + " "
-			        + "LONG " + longOptionOpen.getSymbol() + " " + ProjectProperties.dateFormat.format(longOptionOpen.getExpiration()) + " " 
+			return Utils.asMMMddYYYY(longOptionOpen.getTrade_date()) + " "
+			        + "LONG " + longOptionOpen.getSymbol() + " " + Utils.asMMMddYYYY(longOptionOpen.getExpiration()) + " " 
 					+ longOptionOpen.getStrike() + " " + longOptionOpen.getCall_put() + " " + longOptionOpen.getMean_price() + " "
-					+ "SHORT " + shortOptionOpen.getSymbol() + " " + ProjectProperties.dateFormat.format(shortOptionOpen.getExpiration()) + " " 
+					+ "SHORT " + shortOptionOpen.getSymbol() + " " + Utils.asMMMddYYYY(shortOptionOpen.getExpiration()) + " " 
 					+ shortOptionOpen.getStrike() + " " + shortOptionOpen.getCall_put() + " " + shortOptionOpen.getMean_price() + " "
-					+ "Net Price:" + ProjectProperties.df.format(getOpenCost());
+					+ "Net Price:" + Utils.df.format(getOpenCost());
 		} else {
 			return "no vertical open positions";
 		}

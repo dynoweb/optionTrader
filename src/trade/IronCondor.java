@@ -1,6 +1,6 @@
 package trade;
 
-import misc.ProjectProperties;
+import misc.Utils;
 
 /**
  * An order contains 1 or 2 VerticalSpreads
@@ -29,6 +29,6 @@ public class IronCondor {
 	}
 	
 	public String toString() {
-		return callSpread + ", " + putSpread + " Net Credit: " + ProjectProperties.df.format((callSpread.getOpenCost() + putSpread.getOpenCost()) * -1);
+		return callSpread + ", " + putSpread + " Net Credit: " + Utils.df.format((callSpread.getOpenCost() + putSpread.getOpenCost()) * -1);
 	}
 }

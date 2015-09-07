@@ -2,6 +2,9 @@ package trade;
 
 public class TradeProperties {
 
+	public static final String SYMBOL = "SPX";
+	public static final int CONTRACTS = 1;
+	
 	// Open trade properties
 	public static double OPEN_DELTA = 0.10;
 	public static int OPEN_DTE = 45;

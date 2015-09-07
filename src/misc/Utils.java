@@ -2,6 +2,8 @@ package misc;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -15,6 +17,14 @@ import model.service.HolidayService;
 
 public class Utils {
 
+	// ProjectProperties.dateFormat.format(longOptionOpen.getExpiration())
+	public static SimpleDateFormat dateFormat = new SimpleDateFormat("MMM dd, YYYY ");
+	public static SimpleDateFormat shortDateFormat = new SimpleDateFormat("MM-dd-YY ");
+	public static SimpleDateFormat abriviatedDateFormat = new SimpleDateFormat("MM YY ");
+	
+	// ProjectProperties.df.format(54.680054);
+	public static DecimalFormat df = new DecimalFormat("#.00");
+
 	public static Date addDays(Date date, int days) {
 		
 	    Calendar cal = Calendar.getInstance();
@@ -23,44 +33,55 @@ public class Utils {
 	    return cal.getTime();
 	}
 
-	/**
-		 * 
-		 * @param year
-		 * @param month	[1..12]
-		 * @return
-		 */
-		public static Date getFirstTradingDayOfTheMonth(int year, int month) {
-			
-			Calendar firstTradingDayOfMonth = Calendar.getInstance();
-			firstTradingDayOfMonth.clear();
-			
-			firstTradingDayOfMonth.set(Calendar.YEAR, year);
-			firstTradingDayOfMonth.set(Calendar.MONTH, month-1);
-			firstTradingDayOfMonth.set(Calendar.DATE, 1);
+	public static String asMMMddYYYY(Date date) {
+		return dateFormat.format(date);
+	}
 	
-	//		firstTradingDayOfMonth.set(Calendar.HOUR, 0);
-	//		firstTradingDayOfMonth.set(Calendar.MINUTE, 0);
-	//		firstTradingDayOfMonth.set(Calendar.MILLISECOND, 0);
+	public static String asMMddYY(Date date) {
+		return shortDateFormat.format(date);
+	}
+	
+	public static String asMMYY(Date date) {
+		return abriviatedDateFormat.format(date);
+	}
+	
+	/** 
+	 * @param year
+	 * @param month	[1..12]
+	 * @return
+	 */
+	public static Date getFirstTradingDayOfTheMonth(int year, int month) {
+		
+		Calendar firstTradingDayOfMonth = Calendar.getInstance();
+		firstTradingDayOfMonth.clear();
+		
+		firstTradingDayOfMonth.set(Calendar.YEAR, year);
+		firstTradingDayOfMonth.set(Calendar.MONTH, month-1);
+		firstTradingDayOfMonth.set(Calendar.DATE, 1);
+
+//		firstTradingDayOfMonth.set(Calendar.HOUR, 0);
+//		firstTradingDayOfMonth.set(Calendar.MINUTE, 0);
+//		firstTradingDayOfMonth.set(Calendar.MILLISECOND, 0);
+		
+		Calendar holidayCal = Calendar.getInstance(); 
+		
+		HolidayService hs = HolidayService.getInstance();
+		List<Holiday> holidays = hs.getHolidays();
+		for (Holiday holiday : holidays) {
 			
-			Calendar holidayCal = Calendar.getInstance(); 
-			
-			HolidayService hs = HolidayService.getInstance();
-			List<Holiday> holidays = hs.getHolidays();
-			for (Holiday holiday : holidays) {
-				
-				holidayCal.setTime(holiday.getHoliday());
-				if (holidayCal.get(Calendar.DAY_OF_YEAR) == firstTradingDayOfMonth.get(Calendar.DAY_OF_YEAR)) {
-					if (firstTradingDayOfMonth.get(Calendar.DAY_OF_WEEK) == Calendar.FRIDAY) {
-						firstTradingDayOfMonth.add(Calendar.DATE, 3);
-					} else {
-						firstTradingDayOfMonth.add(Calendar.DATE, 1);	// assuming holiday was on a Monday
-					}
-					break;
+			holidayCal.setTime(holiday.getHoliday());
+			if (holidayCal.get(Calendar.DAY_OF_YEAR) == firstTradingDayOfMonth.get(Calendar.DAY_OF_YEAR)) {
+				if (firstTradingDayOfMonth.get(Calendar.DAY_OF_WEEK) == Calendar.FRIDAY) {
+					firstTradingDayOfMonth.add(Calendar.DATE, 3);
+				} else {
+					firstTradingDayOfMonth.add(Calendar.DATE, 1);	// assuming holiday was on a Monday
 				}
+				break;
 			}
-			
-			return firstTradingDayOfMonth.getTime();
 		}
+		
+		return firstTradingDayOfMonth.getTime();
+	}
 
 	/**
 	 * Determines the third Friday of the month
@@ -170,7 +191,7 @@ public class Utils {
 			}
 		}
 
-		System.out.println("getNextTradeDates: " + ProjectProperties.dateFormat.format(tradeDayCal.getTime()) + " " + ProjectProperties.dateFormat.format(expiration));
+		System.out.println("getNextTradeDates: " + asMMMddYYYY(tradeDayCal.getTime()) + " " + asMMMddYYYY(expiration));
 		
 		return tradeDayCal.getTime();
 	}

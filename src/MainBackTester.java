@@ -6,7 +6,6 @@ import java.util.Map;
 import trade.OpenTrade;
 import trade.Report;
 import trade.TradeProperties;
-import misc.ProjectProperties;
 import misc.Utils;
 import model.Spx;
 import model.service.SpxService;
@@ -28,9 +27,7 @@ public class MainBackTester {
 //		    System.out.println ("openTradeDate: "  + openTradeDate + " optionsExpiration: " + optionsExpiration + " Days: " + TimeUnit.DAYS.convert(diff, TimeUnit.MILLISECONDS));
 //		}
 		
-		String symbol = "Spx";
-		int contracts = 1;
-		bt.runBackTest("symbol", contracts);
+		bt.runBackTest(TradeProperties.SYMBOL, TradeProperties.CONTRACTS);
 	}
 	
 	
@@ -44,42 +41,17 @@ public class MainBackTester {
 		    Date tradeDate = tradeDateSet.getKey();
 		    Date expiration = tradeDateSet.getValue();
 		    
-		    System.out.println("checking: tradeDate: "  + ProjectProperties.dateFormat.format(tradeDate) 
-	    			+ " expiration: " + ProjectProperties.dateFormat.format(expiration));
-		    SpxService spxService = new SpxService();
-		    callPut = "C";
-		    List<Spx> spxCallChain = spxService.getOptionChain(tradeDate, expiration, callPut);
+		    System.out.println("checking: tradeDate: "  + Utils.asMMMddYYYY(tradeDate) 
+	    			+ " expiration: " + Utils.asMMMddYYYY(expiration));
 		    
-		    if (spxCallChain.isEmpty()) {
-		    	
-		    	Calendar expirationDateCal = Calendar.getInstance();
-		    	expirationDateCal.clear();		    	
-		    	expirationDateCal.setTime(expiration);
-		    	expirationDateCal.add(Calendar.DATE, 1);
-		    	expiration = expirationDateCal.getTime();
-		    	
-			    System.out.println("checking: tradeDate: "  + ProjectProperties.dateFormat.format(tradeDate) 
-		    			+ " expiration: " + ProjectProperties.dateFormat.format(expiration));
-		    	spxCallChain = spxService.getOptionChain(tradeDate, expiration, callPut);
-		    }
-		    
-//		    for (Spx spx : spxCallChain) {
-//				
-//		    	System.out.println("runBackTest: tradeDate: "  + ProjectProperties.dateFormat.format(spx.getTrade_date()) 
-//		    			+ " expiration: " + ProjectProperties.dateFormat.format(spx.getExpiration()) + " Delta: " + spx.getDelta());
-//			}
-		    
-		    if (!spxCallChain.isEmpty()) {
-			    callPut = "P";
-			    List<Spx> spxPutChain = spxService.getOptionChain(tradeDate, expiration, callPut);
-			    OpenTrade.openIronCondor(spxCallChain, spxPutChain, contracts);
-		    }
+		    OpenTrade.findIronCondorChains(tradeDate, expiration);
 		}
 			
 //		CloseTrade.closeTrades(symbol);
 		
 		Report.showTradeResults();
 	}
-	
+
+
 
 }
