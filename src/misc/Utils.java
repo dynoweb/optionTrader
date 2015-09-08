@@ -7,6 +7,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -203,5 +204,63 @@ public class Utils {
 	    bd = bd.setScale(places, RoundingMode.DOWN);
 	    return bd.doubleValue();
 	}
+	
+	/**
+	 * Calculated the number of days between to calendars.  
+	 * 
+	 * Note: Assumes that startDate is either in the same year as endDate or
+	 * the prior year.
+	 * 
+	 * @param startDate
+	 * @param endDate
+	 * @return
+	 * 	number of days
+	 */
+	public static int calculateDaysBetween(Calendar startDate, Calendar endDate) {
 
+		int days = 0;
+		if (startDate.get(Calendar.YEAR) == endDate.get(Calendar.YEAR)) {
+			days = endDate.get(Calendar.DAY_OF_YEAR) - startDate.get(Calendar.DAY_OF_YEAR);
+		} else {
+			Calendar endOfYear = new GregorianCalendar();
+			endOfYear.set(Calendar.YEAR, 11, 31);
+			days = endOfYear.get(Calendar.DAY_OF_YEAR) - startDate.get(Calendar.DAY_OF_YEAR);
+			days += endDate.get(Calendar.DAY_OF_YEAR);
+		}
+		
+		return days;
+	}
+
+	public static void main(String[] args) {
+		
+		Calendar startDate = new GregorianCalendar();
+		Calendar endDate = new GregorianCalendar();
+		
+		// Note: Months are 0 based, days are 1 based.
+		startDate.set(2015, 1, 1);		
+		endDate.set(2015,2,1);
+		
+		System.out.println("Days: " + Utils.calculateDaysBetween(startDate, endDate));
+	}
+
+	public static int calculateDaysBetween(Date start, Date end) {
+
+		Calendar startDate = new GregorianCalendar();
+		Calendar endDate = new GregorianCalendar();
+		
+		startDate.setTime(start);
+		endDate.setTime(end);
+		
+		return calculateDaysBetween(startDate, endDate);
+	}
+
+	public static boolean isHoliday(Calendar calendar) {
+		
+		HolidayService holidayService = HolidayService.getInstance(); 
+		Map<Date, String> holidayMap = holidayService.getHolidaysMap();
+		if (holidayMap.containsKey(calendar.getTime())) {
+			return true;
+		}
+		return false;
+	}
 }

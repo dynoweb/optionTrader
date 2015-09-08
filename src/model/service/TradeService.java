@@ -7,6 +7,7 @@ import java.util.List;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.Persistence;
+import javax.persistence.Query;
 
 import trade.IronCondor;
 import trade.TradeProperties;
@@ -44,6 +45,7 @@ public class TradeService {
 		trade.setExecTime(shortCall.getExecTime());
 		trade.setExp(shortCall.getExp());
 		trade.setTradeType("IRON CONDOR");
+		trade.setClose_status("OPEN");
 		
 		double openingCost = Utils.round(shortCall.getPrice() * shortCall.getQty() + longCall.getPrice() * longCall.getQty() +
 				 shortPut.getPrice() * shortPut.getQty() + longPut.getPrice() * longPut.getQty(), 2);
@@ -68,6 +70,8 @@ public class TradeService {
 		em.persist(longPut);
 		
 		em.getTransaction().commit();
+		em.close();
+		emf.close();
 	}
 	
 	private static TradeDetail initializeTradeDetail(Spx spx, int contracts, String posEffect, String side) {
@@ -91,6 +95,31 @@ public class TradeService {
 //		tradeService.addTrade(trade);		
 //
 		return tradeDetail;
+	}
+
+	public static List<Trade> getOpenTrades() {
+
+		EntityManagerFactory emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
+		EntityManager em = emf.createEntityManager();
+	
+		// Note: table name refers to the Entity Class and is case sensitive
+		//       field names are property names in the Entity Class
+		Query query = em.createQuery("select rec from Trade rec "
+				+ "where rec.close_status = :closeStatus "
+//				+ "opt.trade_date = :tradeDate " 
+//				+ "and opt.expiration=:expiration "	
+//				+ "and opt.call_put = :call_put "
+//				+ "and opt.delta > 0.04 "
+//				+ "and opt.delta < 0.96 "
+				+ "order by rec.exp");
+		
+		query.setParameter("closeStatus", "OPEN");
+
+		List<Trade> trades = query.getResultList();
+	
+		em.close();
+		
+		return trades;
 	}
 	
 }

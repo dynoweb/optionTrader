@@ -40,6 +40,13 @@ public class Trade implements Serializable {
 	@Column(name="trade_type")
 	private String tradeType;
 
+	@Column(name="close_status")
+	private String close_status;
+
+	@Temporal(TemporalType.DATE)
+	@Column(name="close_date")
+	private Date closeDate;
+	
 	//bi-directional many-to-one association to TradeDetail
 	@OneToMany(mappedBy="trade")
 	private List<TradeDetail> tradeDetails;
@@ -109,6 +116,22 @@ public class Trade implements Serializable {
 
 	public void setTradeType(String tradeType) {
 		this.tradeType = tradeType;
+	}
+
+	public String getClose_status() {
+		return this.close_status;
+	}
+
+	public void setClose_status(String close_status) {
+		this.close_status = close_status;
+	}
+
+	public Date getCloseDate() {
+		return this.closeDate;
+	}
+
+	public void setCloseDate(Date closeDate) {
+		this.closeDate = closeDate;
 	}
 
 	public List<TradeDetail> getTradeDetails() {

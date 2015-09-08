@@ -1,14 +1,12 @@
-import java.util.Calendar;
 import java.util.Date;
-import java.util.List;
 import java.util.Map;
 
+import trade.CloseTrade;
 import trade.OpenTrade;
 import trade.Report;
 import trade.TradeProperties;
 import misc.Utils;
-import model.Spx;
-import model.service.SpxService;
+import model.service.DbService;
 
 
 public class MainBackTester {
@@ -27,30 +25,29 @@ public class MainBackTester {
 //		    System.out.println ("openTradeDate: "  + openTradeDate + " optionsExpiration: " + optionsExpiration + " Days: " + TimeUnit.DAYS.convert(diff, TimeUnit.MILLISECONDS));
 //		}
 		
-		bt.runBackTest(TradeProperties.SYMBOL, TradeProperties.CONTRACTS);
+		bt.runBackTest();
 	}
 	
 	
-	private void runBackTest(String symbol, int contracts) {
+	private void runBackTest() {
 	
-		Map<Date, Date> potentialTrades = Utils.getPotentialTrades(TradeProperties.OPEN_DTE);
+		DbService.resetDataBase();
 		
-		String callPut;
+		Map<Date, Date> potentialTrades = Utils.getPotentialTrades(TradeProperties.OPEN_DTE);		
 		
 		for (Map.Entry<Date, Date> tradeDateSet : potentialTrades.entrySet()) {
 		    Date tradeDate = tradeDateSet.getKey();
 		    Date expiration = tradeDateSet.getValue();
 		    
-		    System.out.println("checking: tradeDate: "  + Utils.asMMMddYYYY(tradeDate) 
-	    			+ " expiration: " + Utils.asMMMddYYYY(expiration));
-		    
+		    System.out.println("checking: tradeDate: "  + Utils.asMMMddYYYY(tradeDate) + " expiration: " + Utils.asMMMddYYYY(expiration));
 		    OpenTrade.findIronCondorChains(tradeDate, expiration);
 		}
 			
-//		CloseTrade.closeTrades(symbol);
+		CloseTrade.closeTrades();
 		
 		Report.showTradeResults();
 	}
+
 
 
 
