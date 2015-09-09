@@ -7,6 +7,7 @@ import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.Persistence;
 
+import main.TradeProperties;
 import misc.Utils;
 import model.Spx;
 import model.Trade;
@@ -35,7 +36,7 @@ public class CloseTrade {
 
 		// Check for profit target TradeProperties.PROFIT_TARGET
 		em.getTransaction().begin();		
-		closeProfitableTrades();
+		closeProfitableOrLosingTrades();
 		em.getTransaction().commit();
 		
 		
@@ -51,7 +52,7 @@ public class CloseTrade {
 		emf.close();
 	}
 
-	private static void closeProfitableTrades() {
+	private static void closeProfitableOrLosingTrades() {
 
 		Calendar cal = Calendar.getInstance();
 		
@@ -106,14 +107,28 @@ public class CloseTrade {
 							// a PROFIT_TARGET of 0.50 means if we can close for 1/2 the initial credit to close the trade
 							// Note: that openingCost is a negative number, so we want closing cost to be greater 
 							//	(or more positive (closer to zero)) than the opening cost to be profitable
-							if (closingCost > trade.getOpeningCost() * TradeProperties.PROFIT_TARGET) {
+							if (closingCost > trade.getOpeningCost() * (1 - TradeProperties.PROFIT_TARGET)) {
 								
 								System.out.println("Profit Target Closing Cost: " + Utils.round(longCall.getMean_price(),2) + " - " + Utils.round(shortCall.getMean_price(),2) + " + " 
 										 + Utils.round(longPut.getMean_price(),2) + " - " + Utils.round(shortPut.getMean_price(),2));
 								
 								trade.setClosingCost(closingCost);
 								trade.setProfit(Utils.round(trade.getClosingCost() - trade.getOpeningCost(),2));
-								trade.setClose_status("PROFIT TARGET");
+								trade.setClose_status((TradeProperties.PROFIT_TARGET * 100) + "% PROFIT TARGET");
+								trade.setCloseDate(cal.getTime());
+								
+								em.merge(trade);
+								break;								
+							}
+							// MAX_LOSS of 2.0 is 200% of credit
+							if (closingCost < trade.getOpeningCost() * TradeProperties.MAX_LOSS) {
+								
+								System.out.println("Max Loss Closing Cost: " + Utils.round(longCall.getMean_price(),2) + " - " + Utils.round(shortCall.getMean_price(),2) + " + " 
+										 + Utils.round(longPut.getMean_price(),2) + " - " + Utils.round(shortPut.getMean_price(),2));
+								
+								trade.setClosingCost(closingCost);
+								trade.setProfit(Utils.round(trade.getClosingCost() - trade.getOpeningCost(),2));
+								trade.setClose_status((TradeProperties.MAX_LOSS * 100) +  "% MAX LOSS");
 								trade.setCloseDate(cal.getTime());
 								
 								em.merge(trade);
@@ -147,7 +162,7 @@ public class CloseTrade {
 			List<TradeDetail> openTradeDetails = TradeDetailService.getTradeDetails(cal.getTime());
 			
 			// set calendar to date to close trade
-			cal.add(Calendar.DATE, -TradeProperties.CLOSE_DTE);
+			cal.add(Calendar.DATE, - TradeProperties.CLOSE_DTE);
 
 			for (TradeDetail openTradeDetail : openTradeDetails) {
 				if (openTradeDetail.getSide().equals("BUY") && openTradeDetail.getType().equals("CALL")) {
@@ -171,7 +186,7 @@ public class CloseTrade {
 				
 				trade.setClosingCost(Utils.round(longCall.getMean_price() - shortCall.getMean_price() + longPut.getMean_price() - shortPut.getMean_price(), 2));
 				trade.setProfit(Utils.round(trade.getClosingCost() - trade.getOpeningCost(),2));
-				trade.setClose_status("TIME CLOSE");
+				trade.setClose_status(TradeProperties.CLOSE_DTE + " DTE TIME CLOSE");
 				trade.setCloseDate(cal.getTime());
 				
 				em.merge(trade);

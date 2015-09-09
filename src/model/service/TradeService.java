@@ -10,8 +10,8 @@ import javax.persistence.Persistence;
 import javax.persistence.Query;
 
 import trade.IronCondor;
-import trade.TradeProperties;
 import trade.VerticalSpread;
+import main.TradeProperties;
 import misc.Utils;
 import model.Spx;
 import model.Trade;

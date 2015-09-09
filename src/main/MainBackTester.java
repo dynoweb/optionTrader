@@ -1,10 +1,10 @@
+package main;
 import java.util.Date;
 import java.util.Map;
 
 import trade.CloseTrade;
 import trade.OpenTrade;
 import trade.Report;
-import trade.TradeProperties;
 import misc.Utils;
 import model.service.DbService;
 
