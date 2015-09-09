@@ -1,0 +1,3 @@
+Note path uses forward slashes
+
+mysql> LOAD DATA LOCAL INFILE 'C:/Users/rcromer/Documents/Trading/ivolatility/SPX - 201001-06.csv' INTO TABLE optionsdb.spx FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n' IGNORE 1 LINES;

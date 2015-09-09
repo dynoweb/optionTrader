@@ -154,7 +154,7 @@ public class Utils {
 		Map<Date, Date> tradeDates = new LinkedHashMap<Date, Date>();
 		
 		List<Date> expirations = getMonthlyExpirations(2010);
-		//expirations.addAll(getMonthlyExpirations(2011));
+		expirations.addAll(getMonthlyExpirations(2011));
 		
 		for (Date expiration : expirations) {
 			Date openTradeDate = getTradeDate(expiration, dte);

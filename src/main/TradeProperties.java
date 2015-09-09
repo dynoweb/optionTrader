@@ -12,6 +12,6 @@ public class TradeProperties {
 	
 	// Close trade properties
 	public static double MAX_LOSS = 2.0;  // 2.0 - 200%
-	public static int CLOSE_DTE = 8;
-	public static double PROFIT_TARGET = 0.5;  // 0.50 - 50% of max potential
+	public static int CLOSE_DTE = 2;	// 8 is the default
+	public static double PROFIT_TARGET = 0.75;  // 0.50 - 50% of max potential
 }

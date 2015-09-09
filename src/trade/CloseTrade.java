@@ -83,7 +83,7 @@ public class CloseTrade {
 					
 					if (!Utils.isHoliday(cal)) {
 					
-						//System.out.println("Checking profit target on " + Utils.asMMddYY(cal.getTime()));
+						System.out.println("Checking profit target on " + Utils.asMMddYY(cal.getTime()));
 						
 						for (TradeDetail openTradeDetail : openTradeDetails) {
 							if (openTradeDetail.getSide().equals("BUY") && openTradeDetail.getType().equals("CALL")) {

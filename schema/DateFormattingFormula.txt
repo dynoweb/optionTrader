@@ -1,0 +1,2 @@
+=CONCATENATE(YEAR(F2),"-",MONTH(F2),"-",DAY(F2))
+
