@@ -121,5 +121,30 @@ public class TradeService {
 		
 		return trades;
 	}
+
+	public static List<Trade> getTrades() {
+		
+		EntityManagerFactory emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
+		EntityManager em = emf.createEntityManager();
+	
+		// Note: table name refers to the Entity Class and is case sensitive
+		//       field names are property names in the Entity Class
+		Query query = em.createQuery("select rec from Trade rec "
+//				+ "where rec.close_status = :closeStatus "
+//				+ "opt.trade_date = :tradeDate " 
+//				+ "and opt.expiration=:expiration "	
+//				+ "and opt.call_put = :call_put "
+//				+ "and opt.delta > 0.04 "
+//				+ "and opt.delta < 0.96 "
+				+ "order by rec.exp");
+		
+		//query.setParameter("closeStatus", "OPEN");
+
+		List<Trade> trades = query.getResultList();
+	
+		em.close();
+		
+		return trades;
+	}
 	
 }

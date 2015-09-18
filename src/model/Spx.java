@@ -4,6 +4,8 @@ import java.io.Serializable;
 
 import javax.persistence.*;
 
+import misc.Utils;
+
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -270,18 +272,7 @@ public class Spx implements Serializable {
 
 	public String toString() {
 					
-		//SimpleDateFormat dateFormat2 = new SimpleDateFormat("MMM YY ");
-		SimpleDateFormat dateFormat = new SimpleDateFormat("MMM DD YYYY  ");
-		
-		//Calendar td = Calendar.getInstance();
-		//td.setTime(trade_date);
-		//Calendar ex = Calendar.getInstance();
-		//ex.setTime(expiration);
-		
-		String td = dateFormat.format(trade_date);
-		String exp = dateFormat.format(expiration);
-		
-		return  "Spx: " + td + " " + this.adjusted_stock_close_price + "  " + exp + strike + " " + (call_put.equals("C") ? "CALL" : "PUT") + 
+		return  "Spx: " + Utils.asMMddYY(trade_date) + " " + this.adjusted_stock_close_price + "  " + Utils.asMMddYY(expiration) + strike + " " + (call_put.equals("C") ? "CALL" : "PUT") + 
 				" Delta: " + this.delta + " Bid: " + this.bid + " Ask:" + this.ask + " Mid: " + this.mean_price;
 	}
 

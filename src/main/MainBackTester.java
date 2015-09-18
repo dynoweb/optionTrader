@@ -46,6 +46,8 @@ public class MainBackTester {
 		CloseTrade.closeTrades();
 		
 		Report.showTradeResults();
+		
+		System.out.println("Finished!");
 	}
 
 

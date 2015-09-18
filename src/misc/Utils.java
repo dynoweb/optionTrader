@@ -153,8 +153,12 @@ public class Utils {
 		
 		Map<Date, Date> tradeDates = new LinkedHashMap<Date, Date>();
 		
+		// TODO - Adding years needs to be dynamic 
 		List<Date> expirations = getMonthlyExpirations(2010);
 		expirations.addAll(getMonthlyExpirations(2011));
+		expirations.addAll(getMonthlyExpirations(2012));
+		expirations.addAll(getMonthlyExpirations(2013));
+		expirations.addAll(getMonthlyExpirations(2014));
 		
 		for (Date expiration : expirations) {
 			Date openTradeDate = getTradeDate(expiration, dte);

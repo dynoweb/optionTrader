@@ -117,6 +117,10 @@ public class OpenTrade {
 		VerticalSpread callSpread = openCallSpread(spxCallChain);
 		VerticalSpread putSpread = openPutSpread(spxPutChain);
 		
+		if (callSpread == null || callSpread.getLongOptionOpen() == null) {
+			System.out.println("null pointer problem");
+		}
+		
 		IronCondor ironCondor = new IronCondor();
 		ironCondor.setCallSpread(callSpread);
 		ironCondor.setPutSpread(putSpread);
@@ -182,6 +186,21 @@ public class OpenTrade {
 				spxLongCall = spxCall;
 				break;
 			}
+		}
+		
+		// This may not fix the problem of missing strikes, but hopefully it will fix most of them.
+		if (spxLongCall == null) {
+			System.err.println("Unable to set long call at " + longStrike);
+			int shortStrike = spxShortCall.getStrike() + 5; // trying the next level
+			for (Spx spxCall : spxCallChain) {
+				if (spxCall.getStrike() == shortStrike) {
+					spxShortCall = spxCall;
+				}
+				if (spxCall.getStrike() == shortStrike + TradeProperties.SPREAD_WIDTH) {
+					spxLongCall = spxCall;
+					break;
+				}
+			}			
 		}
 		
 		VerticalSpread callSpread = new VerticalSpread();
