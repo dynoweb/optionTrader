@@ -1,7 +1,7 @@
 package trade;
 
 import misc.Utils;
-import model.Spx;
+import model.OptionPricing;
 
 /**
  * A straddle has two legs, one put and one call.
@@ -11,10 +11,10 @@ import model.Spx;
  */
 public class VerticalSpread {
 
-	private Spx longOptionClose = null;
-	private Spx longOptionOpen = null;
-	private Spx shortOptionClose = null;
-	private Spx shortOptionOpen = null;
+	private OptionPricing longOptionClose = null;
+	private OptionPricing longOptionOpen = null;
+	private OptionPricing shortOptionClose = null;
+	private OptionPricing shortOptionOpen = null;
 	
 	private double openCost = 0;
 	private double closeCost = 0;
@@ -38,31 +38,31 @@ public class VerticalSpread {
 	public void setSpreadType(String spreadType) {
 		this.spreadType = spreadType;
 	}
-	public Spx getLongOptionClose() {
+	public OptionPricing getLongOptionClose() {
 		return longOptionClose;
 	}
-	public void setLongOptionClose(Spx longOptionClose) {
+	public void setLongOptionClose(OptionPricing longOptionClose) {
 		this.longOptionClose = longOptionClose;
 	}
-	public Spx getLongOptionOpen() {
+	public OptionPricing getLongOptionOpen() {
 		return longOptionOpen;
 	}
 	
-	public void setLongOptionOpen(Spx longOptionOpen) {
+	public void setLongOptionOpen(OptionPricing longOptionOpen) {
 		this.longOptionOpen = longOptionOpen;
 	}
 	
-	public Spx getShortOptionClose() {
+	public OptionPricing getShortOptionClose() {
 		return shortOptionClose;
 	}
-	public void setShortOptionClose(Spx shortOptionClose) {
+	public void setShortOptionClose(OptionPricing shortOptionClose) {
 		this.shortOptionClose = shortOptionClose;
 	}
-	public Spx getShortOptionOpen() {
+	public OptionPricing getShortOptionOpen() {
 		return shortOptionOpen;
 	}
 	
-	public void setShortOptionOpen(Spx shortOptionOpen) {
+	public void setShortOptionOpen(OptionPricing shortOptionOpen) {
 		this.shortOptionOpen = shortOptionOpen;
 	}
 	

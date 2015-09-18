@@ -10,10 +10,10 @@ import javax.persistence.Persistence;
 
 import main.TradeProperties;
 import misc.Utils;
-import model.Spx;
+import model.OptionPricing;
 import model.Trade;
 import model.TradeDetail;
-import model.service.SpxService;
+import model.service.OptionPricingService;
 import model.service.TradeDetailService;
 import model.service.TradeService;
 
@@ -71,10 +71,10 @@ public class CloseTrade {
 			for (int days = 1; days < maxDte - TradeProperties.CLOSE_DTE; days++) {				
 
 				// Resetting here to make sure I find a valid match 
-				Spx longCall = null;
-				Spx shortCall = null;
-				Spx longPut = null;
-				Spx shortPut = null;
+				OptionPricing longCall = null;
+				OptionPricing shortCall = null;
+				OptionPricing longPut = null;
+				OptionPricing shortPut = null;
 				
 				cal.clear();
 				cal.setTime(trade.getExecTime());				
@@ -89,25 +89,26 @@ public class CloseTrade {
 						
 						//System.out.println("Checking profit target on " + Utils.asMMddYY(cal.getTime()));
 						try {
-						for (TradeDetail openTradeDetail : openTradeDetails) {
-							strike = openTradeDetail.getStrike();
-							
-							if (openTradeDetail.getSide().equals("BUY") && openTradeDetail.getType().equals("CALL")) {
-								longCall = SpxService.getRecord(cal.getTime(), trade.getExp(), openTradeDetail.getStrike(), "C");
+							for (TradeDetail openTradeDetail : openTradeDetails) {
+								strike = openTradeDetail.getStrike();
+								
+								if (openTradeDetail.getSide().equals("BUY") && openTradeDetail.getType().equals("CALL")) {
+									longCall = OptionPricingService.getRecord(cal.getTime(), trade.getExp(), openTradeDetail.getStrike(), "C");
+								}
+								if (openTradeDetail.getSide().equals("SELL") && openTradeDetail.getType().equals("CALL")) {
+									shortCall = OptionPricingService.getRecord(cal.getTime(), trade.getExp(), openTradeDetail.getStrike(), "C");
+								}
+								if (openTradeDetail.getSide().equals("BUY") && openTradeDetail.getType().equals("PUT")) {
+									longPut = OptionPricingService.getRecord(cal.getTime(), trade.getExp(), openTradeDetail.getStrike(), "P");
+								}
+								if (openTradeDetail.getSide().equals("SELL") && openTradeDetail.getType().equals("PUT")) {
+									shortPut = OptionPricingService.getRecord(cal.getTime(), trade.getExp(), openTradeDetail.getStrike(), "P");
+								}
 							}
-							if (openTradeDetail.getSide().equals("SELL") && openTradeDetail.getType().equals("CALL")) {
-								shortCall = SpxService.getRecord(cal.getTime(), trade.getExp(), openTradeDetail.getStrike(), "C");
-							}
-							if (openTradeDetail.getSide().equals("BUY") && openTradeDetail.getType().equals("PUT")) {
-								longPut = SpxService.getRecord(cal.getTime(), trade.getExp(), openTradeDetail.getStrike(), "P");
-							}
-							if (openTradeDetail.getSide().equals("SELL") && openTradeDetail.getType().equals("PUT")) {
-								shortPut = SpxService.getRecord(cal.getTime(), trade.getExp(), openTradeDetail.getStrike(), "P");
-							}
-						}
 						} catch (Exception e) {
 							System.out.println("Checking profit target on " + Utils.asMMddYY(cal.getTime()) + " Expires on " + Utils.asMMddYY(exp) + " strike: " + strike);
-							throw e;
+							e.printStackTrace();
+							//throw e;
 						}
 						
 						if (longCall != null && shortCall != null && longPut != null && shortPut != null) {
@@ -159,10 +160,10 @@ public class CloseTrade {
 
 	private static void closeTimeExit() {
 		
-		Spx longCall = null;
-		Spx shortCall = null;
-		Spx longPut = null;
-		Spx shortPut = null;
+		OptionPricing longCall = null;
+		OptionPricing shortCall = null;
+		OptionPricing longPut = null;
+		OptionPricing shortPut = null;
 		
 		Calendar cal = Calendar.getInstance();
 		
@@ -178,20 +179,29 @@ public class CloseTrade {
 			
 			// set calendar to date to close trade
 			cal.add(Calendar.DATE, - TradeProperties.CLOSE_DTE);
+			double strike = 0.0;
 
-			for (TradeDetail openTradeDetail : openTradeDetails) {
-				if (openTradeDetail.getSide().equals("BUY") && openTradeDetail.getType().equals("CALL")) {
-					longCall = SpxService.getRecord(cal.getTime(), trade.getExp(), openTradeDetail.getStrike(), "C");
+			try {
+				for (TradeDetail openTradeDetail : openTradeDetails) {
+					strike = openTradeDetail.getStrike();
+					
+					if (openTradeDetail.getSide().equals("BUY") && openTradeDetail.getType().equals("CALL")) {
+						longCall = OptionPricingService.getRecord(cal.getTime(), trade.getExp(), openTradeDetail.getStrike(), "C");
+					}
+					if (openTradeDetail.getSide().equals("SELL") && openTradeDetail.getType().equals("CALL")) {
+						shortCall = OptionPricingService.getRecord(cal.getTime(), trade.getExp(), openTradeDetail.getStrike(), "C");
+					}
+					if (openTradeDetail.getSide().equals("BUY") && openTradeDetail.getType().equals("PUT")) {
+						longPut = OptionPricingService.getRecord(cal.getTime(), trade.getExp(), openTradeDetail.getStrike(), "P");
+					}
+					if (openTradeDetail.getSide().equals("SELL") && openTradeDetail.getType().equals("PUT")) {
+						shortPut = OptionPricingService.getRecord(cal.getTime(), trade.getExp(), openTradeDetail.getStrike(), "P");
+					}
 				}
-				if (openTradeDetail.getSide().equals("SELL") && openTradeDetail.getType().equals("CALL")) {
-					shortCall = SpxService.getRecord(cal.getTime(), trade.getExp(), openTradeDetail.getStrike(), "C");
-				}
-				if (openTradeDetail.getSide().equals("BUY") && openTradeDetail.getType().equals("PUT")) {
-					longPut = SpxService.getRecord(cal.getTime(), trade.getExp(), openTradeDetail.getStrike(), "P");
-				}
-				if (openTradeDetail.getSide().equals("SELL") && openTradeDetail.getType().equals("PUT")) {
-					shortPut = SpxService.getRecord(cal.getTime(), trade.getExp(), openTradeDetail.getStrike(), "P");
-				}
+			} catch (Exception e) {
+				System.out.println("Checking time close on " + Utils.asMMddYY(cal.getTime()) + " Expires on " + Utils.asMMddYY(cal.getTime()) + " strike: " + strike);
+				e.printStackTrace();
+				//throw e;
 			}
 			
 			if (longCall != null && shortCall != null && longPut != null && shortPut != null) {

@@ -6,8 +6,8 @@ import java.util.List;
 
 import main.TradeProperties;
 import misc.Utils;
-import model.Spx;
-import model.service.SpxService;
+import model.OptionPricing;
+import model.service.OptionPricingService;
 import model.service.TradeService;
 
 public class OpenTrade {
@@ -81,11 +81,11 @@ public class OpenTrade {
 	public static void findIronCondorChains(Date tradeDate, Date expiration) {
 		
 		String callPut;
-		SpxService spxService = new SpxService();
+		OptionPricingService ops = new OptionPricingService();
 		callPut = "C";
-		List<Spx> spxCallChain = spxService.getOptionChain(tradeDate, expiration, callPut);
+		List<OptionPricing> callChain = ops.getOptionChain(tradeDate, expiration, callPut);
 		
-		if (spxCallChain.isEmpty()) {
+		if (callChain.isEmpty()) {
 			
 			Calendar expirationDateCal = Calendar.getInstance();
 			expirationDateCal.clear();		    	
@@ -95,7 +95,7 @@ public class OpenTrade {
 			
 		    System.out.println("checking: tradeDate: "  + Utils.asMMMddYYYY(tradeDate) 
 					+ " expiration: " + Utils.asMMMddYYYY(expiration));
-			spxCallChain = spxService.getOptionChain(tradeDate, expiration, callPut);
+			callChain = ops.getOptionChain(tradeDate, expiration, callPut);
 		}
 		
 //		    for (Spx spx : spxCallChain) {
@@ -104,18 +104,18 @@ public class OpenTrade {
 //		    			+ " expiration: " + ProjectProperties.dateFormat.format(spx.getExpiration()) + " Delta: " + spx.getDelta());
 //			}
 		
-		if (!spxCallChain.isEmpty()) {
+		if (!callChain.isEmpty()) {
 		    callPut = "P";
-		    List<Spx> spxPutChain = spxService.getOptionChain(tradeDate, expiration, callPut);
-		    openIronCondor(spxCallChain, spxPutChain);
+		    List<OptionPricing> putChain = ops.getOptionChain(tradeDate, expiration, callPut);
+		    openIronCondor(callChain, putChain);
 		}
 	}
 	
 	
-	public static void openIronCondor(List<Spx> spxCallChain, List<Spx> spxPutChain) {
+	public static void openIronCondor(List<OptionPricing> callChain, List<OptionPricing> putChain) {
 		
-		VerticalSpread callSpread = openCallSpread(spxCallChain);
-		VerticalSpread putSpread = openPutSpread(spxPutChain);
+		VerticalSpread callSpread = openCallSpread(callChain);
+		VerticalSpread putSpread = openPutSpread(putChain);
 		
 		if (callSpread == null || callSpread.getLongOptionOpen() == null) {
 			System.out.println("null pointer problem");
@@ -128,84 +128,84 @@ public class OpenTrade {
     	TradeService.openIronCondor(ironCondor);
 	}
 	
-	private static VerticalSpread openPutSpread(List<Spx> spxPutChain) {
+	private static VerticalSpread openPutSpread(List<OptionPricing> putChain) {
 		
 		// Build Pub Bull Debit Spread
 		// find short put at delta
-		Spx spxShortPut = null;
+		OptionPricing shortPut = null;
 		double smallestDiff = 1.0;
-		for (Spx spxPut : spxPutChain) {
+		for (OptionPricing put : putChain) {
 			
-			double diffFromDelta = Math.abs(TradeProperties.OPEN_DELTA + spxPut.getDelta());
+			double diffFromDelta = Math.abs(TradeProperties.OPEN_DELTA + put.getDelta());
 			if (diffFromDelta < smallestDiff) {
-				spxShortPut = spxPut;
+				shortPut = put;
 				smallestDiff = diffFromDelta;
 			}
 		}
 		
 		// get long put
-		int putStrike = spxShortPut.getStrike() - TradeProperties.SPREAD_WIDTH;
-		Spx spxLongPut = null;
+		int putStrike = shortPut.getStrike() - TradeProperties.SPREAD_WIDTH;
+		OptionPricing longPut = null;
 		
-		for (Spx spxPut : spxPutChain) {
-			if (spxPut.getStrike() == putStrike) {
-				spxLongPut = spxPut;
+		for (OptionPricing put : putChain) {
+			if (put.getStrike() == putStrike) {
+				longPut = put;
 				break;
 			}
 		}
 		
 		VerticalSpread putSpread = new VerticalSpread();
-		putSpread.setLongOptionOpen(spxLongPut);
-		putSpread.setShortOptionOpen(spxShortPut);
+		putSpread.setLongOptionOpen(longPut);
+		putSpread.setShortOptionOpen(shortPut);
 
 		return putSpread;
 	}
 
-	private static VerticalSpread openCallSpread(List<Spx> spxCallChain) {
+	private static VerticalSpread openCallSpread(List<OptionPricing> callChain) {
 		
 		// Build Call Bear Debit Spread
 		
 		// find short call at delta
-		Spx spxShortCall = null;
+		OptionPricing shortCall = null;
 		double smallestDiff = 1.0;
-		for (Spx spxCall : spxCallChain) {
+		for (OptionPricing call : callChain) {
 			
-			double diffFromDelta = Math.abs(TradeProperties.OPEN_DELTA - spxCall.getDelta());
+			double diffFromDelta = Math.abs(TradeProperties.OPEN_DELTA - call.getDelta());
 			if (diffFromDelta < smallestDiff) {
-				spxShortCall = spxCall;
+				shortCall = call;
 				smallestDiff = diffFromDelta;
 			}
 		}
 		
 		// get long call
-		int longStrike = spxShortCall.getStrike() + TradeProperties.SPREAD_WIDTH;
-		Spx spxLongCall = null;
+		int longStrike = shortCall.getStrike() + TradeProperties.SPREAD_WIDTH;
+		OptionPricing longCall = null;
 		
-		for (Spx spxCall : spxCallChain) {
-			if (spxCall.getStrike() == longStrike) {
-				spxLongCall = spxCall;
+		for (OptionPricing call : callChain) {
+			if (call.getStrike() == longStrike) {
+				longCall = call;
 				break;
 			}
 		}
 		
 		// This may not fix the problem of missing strikes, but hopefully it will fix most of them.
-		if (spxLongCall == null) {
+		if (longCall == null) {
 			System.err.println("Unable to set long call at " + longStrike);
-			int shortStrike = spxShortCall.getStrike() + 5; // trying the next level
-			for (Spx spxCall : spxCallChain) {
-				if (spxCall.getStrike() == shortStrike) {
-					spxShortCall = spxCall;
+			int shortStrike = shortCall.getStrike() + 5; // trying the next level
+			for (OptionPricing call : callChain) {
+				if (call.getStrike() == shortStrike) {
+					shortCall = call;
 				}
-				if (spxCall.getStrike() == shortStrike + TradeProperties.SPREAD_WIDTH) {
-					spxLongCall = spxCall;
+				if (call.getStrike() == shortStrike + TradeProperties.SPREAD_WIDTH) {
+					longCall = call;
 					break;
 				}
 			}			
 		}
 		
 		VerticalSpread callSpread = new VerticalSpread();
-		callSpread.setLongOptionOpen(spxLongCall);
-		callSpread.setShortOptionOpen(spxShortCall);
+		callSpread.setLongOptionOpen(longCall);
+		callSpread.setShortOptionOpen(shortCall);
 
 		return callSpread;
 	}

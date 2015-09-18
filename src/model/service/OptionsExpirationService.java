@@ -15,7 +15,7 @@ import model.OptionsExpiration;
 public class OptionsExpirationService {
 	
 	
-	public List<OptionsExpiration> getExpirations(String symbol, Date forDate) {
+	public List<OptionsExpiration> getExpirations(String symbol) {
 		
 		EntityManagerFactory emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
 		EntityManager em = emf.createEntityManager();

@@ -14,7 +14,9 @@ import java.util.List;
 import java.util.Map;
 
 import model.Holiday;
+import model.service.ExpirationService;
 import model.service.HolidayService;
+import model.service.OptionsExpirationService;
 
 public class Utils {
 
@@ -130,16 +132,10 @@ public class Utils {
 //	Dec 18 2015
 
 
-	public static List<Date> getMonthlyExpirations(int year) {
+	public static List<Date> getMonthlyExpirations() {
 		
-		List<Date> expirations = new ArrayList<Date>();
-		
-		for (int i=1; i < 13; i++) {
-			Date date = getMonthlyExpiration(year, i);
-			expirations.add(date);
-		}
-		
-		return expirations;
+		ExpirationService es = new ExpirationService(); 		
+		return es.getPotentialMonthlyExpirations();
 	}
 	
 	/**
@@ -152,13 +148,7 @@ public class Utils {
 	public static Map<Date, Date> getPotentialTrades(int dte) {				
 		
 		Map<Date, Date> tradeDates = new LinkedHashMap<Date, Date>();
-		
-		// TODO - Adding years needs to be dynamic 
-		List<Date> expirations = getMonthlyExpirations(2010);
-		expirations.addAll(getMonthlyExpirations(2011));
-		expirations.addAll(getMonthlyExpirations(2012));
-		expirations.addAll(getMonthlyExpirations(2013));
-		expirations.addAll(getMonthlyExpirations(2014));
+		List<Date> expirations = getMonthlyExpirations();
 		
 		for (Date expiration : expirations) {
 			Date openTradeDate = getTradeDate(expiration, dte);

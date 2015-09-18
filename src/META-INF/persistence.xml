@@ -7,8 +7,11 @@
 		<class>model.Spx</class>
 		<class>model.Holiday</class>
 		<class>model.OptionsExpiration</class>
+		<class>model.OptionPricing</class>
 		<class>model.Trade</class>
 		<class>model.TradeDetail</class>
+		<class>model.Eem</class>
+		<class>model.Tlt</class>
         <properties>         
           <property name="javax.persistence.jdbc.driver" value="com.mysql.jdbc.Driver"/> 
           <property name="javax.persistence.jdbc.url" value="jdbc:mysql://localhost:3306/optionsdb"/> 

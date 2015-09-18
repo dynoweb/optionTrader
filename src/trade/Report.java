@@ -19,7 +19,7 @@ import model.service.TradeService;
 public class Report {
 
 	final static Charset ENCODING = StandardCharsets.UTF_8;
-	static String outFileName = "C:\\_eProj\\optionsdb\\test results\\";
+	static String outFileName = "C:\\_eProj\\optionsdb\\testResults\\";
 	
 	public static void showTradeResults() {
 		

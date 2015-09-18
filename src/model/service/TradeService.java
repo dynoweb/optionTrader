@@ -1,7 +1,5 @@
 package model.service;
 
-import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 
 import javax.persistence.EntityManager;
@@ -13,7 +11,7 @@ import trade.IronCondor;
 import trade.VerticalSpread;
 import main.TradeProperties;
 import misc.Utils;
-import model.Spx;
+import model.OptionPricing;
 import model.Trade;
 import model.TradeDetail;
 
@@ -74,19 +72,19 @@ public class TradeService {
 		emf.close();
 	}
 	
-	private static TradeDetail initializeTradeDetail(Spx spx, int contracts, String posEffect, String side) {
+	private static TradeDetail initializeTradeDetail(OptionPricing optionPricing, int contracts, String posEffect, String side) {
 		
 		TradeDetail tradeDetail = new TradeDetail();
 		
-		tradeDetail.setExecTime(spx.getTrade_date());
-		tradeDetail.setExp(spx.getExpiration());
+		tradeDetail.setExecTime(optionPricing.getTrade_date());
+		tradeDetail.setExp(optionPricing.getExpiration());
 		tradeDetail.setPosEffect(posEffect);
-		tradeDetail.setPrice(spx.getMean_price());
+		tradeDetail.setPrice(optionPricing.getMean_price());
 		tradeDetail.setQty(contracts);
 		tradeDetail.setSide(side);
-		tradeDetail.setStrike((double) spx.getStrike());
-		tradeDetail.setSymbol(spx.getSymbol());
-		tradeDetail.setType(spx.getCall_put().equals("C") ? "CALL" : "PUT");
+		tradeDetail.setStrike((double) optionPricing.getStrike());
+		tradeDetail.setSymbol(optionPricing.getSymbol());
+		tradeDetail.setType(optionPricing.getCall_put().equals("C") ? "CALL" : "PUT");
 		
 //		Trade trade = new Trade();
 //		trade.addTradeDetail(tradeDetail);
