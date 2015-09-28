@@ -43,27 +43,45 @@ public class OptionPricingService {
 
 	public static OptionPricing getRecord(Date tradeDate, Date expiration, double strike, String callPut) {
 			
-			EntityManagerFactory emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
-			EntityManager em = emf.createEntityManager();
-			
-			// Note: table name refers to the Entity Class and is case sensitive
-			//       field names are property names in the Entity Class
-			Query query = em.createQuery("select opt from " + TradeProperties.SYMBOL_FOR_QUERY + " opt where "
-					+ "opt.trade_date = :tradeDate " 
-					+ "and opt.expiration=:expiration "	
-					+ "and opt.call_put = :call_put "
-					+ "and opt.strike = :strike "
-					+ "order by opt.delta");
-			
-			query.setParameter("tradeDate", tradeDate);
-			query.setParameter("expiration", expiration);
-			query.setParameter("call_put", callPut);
-			query.setParameter("strike", strike);
+		EntityManagerFactory emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
+		EntityManager em = emf.createEntityManager();
+		
+		// Note: table name refers to the Entity Class and is case sensitive
+		//       field names are property names in the Entity Class
+		Query query = em.createQuery("select opt from " + TradeProperties.SYMBOL_FOR_QUERY + " opt where "
+				+ "opt.trade_date = :tradeDate " 
+				+ "and opt.expiration=:expiration "	
+				+ "and opt.call_put = :call_put "
+				+ "and opt.strike = :strike ");
+		
+		query.setParameter("tradeDate", tradeDate);
+		query.setParameter("expiration", expiration);
+		query.setParameter("call_put", callPut);
+		query.setParameter("strike", strike);
+		
+		query.setHint("odb.read-only", "true");
 
-			OptionPricing optionPriceRecord = (OptionPricing) query.getSingleResult();	
-			em.close();
-			
-			return optionPriceRecord;
-		}
+		OptionPricing optionPriceRecord = (OptionPricing) query.getSingleResult();	
+		em.close();
+		
+		return optionPriceRecord;
+	}
+	
+	public static Date getLastTradeRecord() {
+		
+		EntityManagerFactory emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
+		EntityManager em = emf.createEntityManager();
+		
+		// Note: table name refers to the Entity Class and is case sensitive
+		//       field names are property names in the Entity Class
+		Query query = em.createQuery("select max(opt.trade_date) from " + TradeProperties.SYMBOL_FOR_QUERY + " opt");
+		
+		query.setHint("odb.read-only", "true");
+
+		Date lastTradeDate = (Date) query.getSingleResult();	
+		em.close();
+		
+		return lastTradeDate;
+	}
 
 }

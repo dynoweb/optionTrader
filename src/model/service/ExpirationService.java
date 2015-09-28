@@ -21,7 +21,7 @@ public class ExpirationService {
 	 * @param symbol required to be in mixed case with the first char upper case for example SPX
 	 * @return
 	 */
-	public List<Date> getPotentialExpirations() {		
+	public List<Date> getExpirations() {		
 		
 		EntityManagerFactory emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
 		EntityManager em = emf.createEntityManager();
@@ -57,10 +57,14 @@ public class ExpirationService {
 		
 		Calendar cal = Calendar.getInstance();
 		
-		for (Date date : getPotentialExpirations()) {
+		for (Date date : getExpirations()) {
 			cal.setTime(date);
-			if (cal.get(Calendar.DAY_OF_MONTH) > 14 && cal.get(Calendar.DAY_OF_MONTH) < 22) {
-				monthlyExpirations.add(date);
+			if (cal.get(Calendar.DAY_OF_MONTH) > 14 && cal.get(Calendar.DAY_OF_MONTH) < 23) {
+				if (cal.get(Calendar.DAY_OF_MONTH) == 22 && cal.get(Calendar.DAY_OF_WEEK) == Calendar.FRIDAY) {
+					// The 22nd must be a Sat for Friday to be the third Friday of the month
+				} else {
+					monthlyExpirations.add(date);
+				}
 			}
 		}
 		return monthlyExpirations;
@@ -75,4 +79,5 @@ public class ExpirationService {
 			System.out.println(Utils.asMMddYY(date));
 		}
 	}
+
 }

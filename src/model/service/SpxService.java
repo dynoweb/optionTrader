@@ -12,7 +12,7 @@ import model.Spx;
 
 public class SpxService {
 
-	public List<Date> getExpirationDates(Date tradeDate) {
+	private List<Date> getExpirationDates(Date tradeDate) {
 		
 		EntityManagerFactory emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
 		EntityManager em = emf.createEntityManager();
@@ -29,7 +29,7 @@ public class SpxService {
 		return expirations;
 	}
 
-	public List<Spx> getOptionChain(Date tradeDate, Date expiration, String callPut) {
+	private List<Spx> getOptionChain(Date tradeDate, Date expiration, String callPut) {
 		
 		EntityManagerFactory emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
 		EntityManager em = emf.createEntityManager();
@@ -55,7 +55,7 @@ public class SpxService {
 		return spxOptionChain;
 	}
 
-	public static Spx getRecord(Date tradeDate, Date expiration, double strike, String callPut) {
+	private static Spx getRecord(Date tradeDate, Date expiration, double strike, String callPut) {
 		
 		EntityManagerFactory emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
 		EntityManager em = emf.createEntityManager();

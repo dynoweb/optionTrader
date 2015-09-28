@@ -185,7 +185,16 @@ public class Utils {
 				tradeDayCal.add(Calendar.DATE, 1);		// Go to Tues
 			}
 		}
-
+		
+		if (holidaysMap.containsKey(tradeDayCal.getTime())) {
+			if (tradeDayCal.get(Calendar.DAY_OF_WEEK) == Calendar.FRIDAY) {
+				tradeDayCal.add(Calendar.DATE, -1); 	// Go back to Thur
+			}
+			if (tradeDayCal.get(Calendar.DAY_OF_WEEK) == Calendar.MONDAY) {
+				tradeDayCal.add(Calendar.DATE, 1); 	// Go back to Tue
+			}
+		}
+		
 		System.out.println("getNextTradeDates: " + asMMMddYYYY(tradeDayCal.getTime()) + " " + asMMMddYYYY(expiration));
 		
 		return tradeDayCal.getTime();
@@ -256,5 +265,11 @@ public class Utils {
 			return true;
 		}
 		return false;
+	}
+
+	public static List<Date> getExpirations() {
+		
+		ExpirationService es = new ExpirationService(); 		
+		return es.getExpirations();
 	}
 }

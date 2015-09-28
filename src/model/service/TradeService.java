@@ -35,10 +35,19 @@ public class TradeService {
 		VerticalSpread callSpread = ironCondor.getCallSpread();
 		VerticalSpread putSpread = ironCondor.getPutSpread();
 		
-		TradeDetail shortCall = initializeTradeDetail(callSpread.getShortOptionOpen(), -contracts, "OPENING", "SELL");
-		TradeDetail longCall = initializeTradeDetail(callSpread.getLongOptionOpen(), contracts, "OPENING", "BUY");
-		TradeDetail shortPut = initializeTradeDetail(putSpread.getShortOptionOpen(), -contracts, "OPENING", "SELL");
-		TradeDetail longPut = initializeTradeDetail(putSpread.getLongOptionOpen(), contracts, "OPENING", "BUY");
+		TradeDetail shortCall = null;
+		TradeDetail longCall = null;
+		TradeDetail shortPut = null;
+		TradeDetail longPut = null;
+    	try {
+			shortCall = initializeTradeDetail(callSpread.getShortOptionOpen(), -contracts, "OPENING", "SELL");
+			longCall = initializeTradeDetail(callSpread.getLongOptionOpen(), contracts, "OPENING", "BUY");
+			shortPut = initializeTradeDetail(putSpread.getShortOptionOpen(), -contracts, "OPENING", "SELL");
+    		longPut = initializeTradeDetail(putSpread.getLongOptionOpen(), contracts, "OPENING", "BUY");
+    	} catch (Exception ex) {
+    		ex.printStackTrace();
+    		throw ex;
+    	}
 		
 		trade.setExecTime(shortCall.getExecTime());
 		trade.setExp(shortCall.getExp());
@@ -114,7 +123,8 @@ public class TradeService {
 		query.setParameter("closeStatus", "OPEN");
 
 		List<Trade> trades = query.getResultList();
-	
+//		Trade trade = trades.get(0);
+//		List<TradeDetail> tradeDetails = trade.getTradeDetails();
 		em.close();
 		
 		return trades;
@@ -143,6 +153,48 @@ public class TradeService {
 		em.close();
 		
 		return trades;
+	}
+
+	public static void openCoveredCall(OptionPricing option) {
+		
+		Trade trade = new Trade();
+		
+		trade.setExecTime(option.getTrade_date());
+		trade.setExp(option.getExpiration());
+		trade.setTradeType("COVERED CALL");		
+		trade.setOpeningCost((Math.round(option.getMean_price()*100) - Math.round(option.getAdjusted_stock_close_price()*100)) * TradeProperties.CONTRACTS);		
+		trade.setClose_status("OPEN");
+		
+		TradeDetail shortCall = initializeTradeDetail(option, -TradeProperties.CONTRACTS, "OPENING", "SELL");
+		
+		TradeDetail longStock = new TradeDetail();;
+
+		longStock.setExecTime(option.getTrade_date());
+		//longStock.setExp(option.getExpiration());
+		longStock.setPrice(Utils.round(option.getAdjusted_stock_close_price(),2));
+		longStock.setPosEffect("OPENING");
+		longStock.setQty(TradeProperties.CONTRACTS * 100);
+		longStock.setSide("BUY");
+		//longStock.setStrike(option.getStrike());
+		longStock.setSymbol(TradeProperties.SYMBOL);
+		longStock.setType("STOCK");
+		
+		
+		EntityManagerFactory emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
+		EntityManager em = emf.createEntityManager();
+		em.getTransaction().begin();		
+
+		em.persist(trade);
+
+		shortCall.setTrade(trade);
+		em.persist(shortCall);
+		
+		longStock.setTrade(trade);
+		em.persist(longStock);
+		
+		em.getTransaction().commit();
+		em.close();
+		emf.close();
 	}
 	
 }

@@ -64,7 +64,7 @@ public class OptionPricing implements Serializable {
 	@Column(name="`stock price for iv`")
 	private double stock_price_for_iv;
 
-	private int strike;
+	private double strike;
 
 	@Lob
 	private String style;
@@ -213,11 +213,11 @@ public class OptionPricing implements Serializable {
 		this.stock_price_for_iv = stock_price_for_iv;
 	}
 
-	public int getStrike() {
+	public double getStrike() {
 		return this.strike;
 	}
 
-	public void setStrike(int strike) {
+	public void setStrike(double strike) {
 		this.strike = strike;
 	}
 
