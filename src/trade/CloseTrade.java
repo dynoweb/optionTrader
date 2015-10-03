@@ -82,7 +82,7 @@ public class CloseTrade {
 
 	private static void closeProfitableOrLosingCoveredCall(Trade trade, int maxDte) {
 
-		Date lastTradeDate = OptionPricingService.getLastTradeRecord();
+		Date lastTradeDate = OptionPricingService.getLastTradeDate();
 
 		TradeDetail coveredCall = null;
 		TradeDetail coveredStock = null;
@@ -133,7 +133,7 @@ public class CloseTrade {
 	private static void closeProfitableOrLosingIronCondor(Trade trade, int maxDte) {
 		
 		Calendar cal = Calendar.getInstance();
-		Date lastTradeDate = OptionPricingService.getLastTradeRecord();
+		Date lastTradeDate = OptionPricingService.getLastTradeDate();
 		List<TradeDetail> openTradeDetails = trade.getTradeDetails();
 		
 		for (int days = 1; days < maxDte - TradeProperties.CLOSE_DTE; days++) {				
@@ -239,7 +239,7 @@ public class CloseTrade {
 		TradeDetail longStock = null; 
 		
 		Calendar cal = Calendar.getInstance();
-		Date lastTradeDate = OptionPricingService.getLastTradeRecord();
+		Date lastTradeDate = OptionPricingService.getLastTradeDate();
 		
 		// Gets all open trades
 		List<Trade> trades = TradeService.getOpenTrades();

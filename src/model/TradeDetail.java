@@ -39,6 +39,8 @@ public class TradeDetail implements Serializable {
 	private String symbol;
 
 	private String type;
+	
+	private String comment;
 
 	//bi-directional many-to-one association to Trade
 	@ManyToOne
@@ -126,6 +128,14 @@ public class TradeDetail implements Serializable {
 
 	public void setType(String type) {
 		this.type = type;
+	}
+
+	public String getComment() {
+		return this.comment;
+	}
+
+	public void setComment(String comment) {
+		this.comment = comment;
 	}
 
 	public Trade getTrade() {

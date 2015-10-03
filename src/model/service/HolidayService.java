@@ -22,6 +22,9 @@ public class HolidayService {
 	
 	private static EntityManagerFactory emf;
 	
+	/**
+	 * Created as a singleton class
+	 */
 	protected HolidayService() {
 		
 		emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
@@ -66,5 +69,14 @@ public class HolidayService {
 		}
 		
 		return holidaysMap;
+	}
+	
+	public boolean isHoliday(Date date) {
+
+		if (holidaysMap.containsKey(date)) {
+		//if (holidays.contains(date)) {
+			return true;
+		}
+		return false;
 	}
 }

@@ -45,7 +45,8 @@ public class Holiday implements Serializable {
 	
 	public String toString() {
 		
-		return "Holiday: " + Utils.asMMMddYYYY(holiday) + " " + name;
+		//return "Holiday: " + Utils.asMMMddYYYY(holiday) + " " + name;
+		return "Holiday: " + holiday + " " + name;
 	}
 
 }

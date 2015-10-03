@@ -7,6 +7,7 @@ import javax.persistence.EntityManagerFactory;
 import javax.persistence.Persistence;
 import javax.persistence.Query;
 
+import trade.CoveredStraddle;
 import trade.IronCondor;
 import trade.VerticalSpread;
 import main.TradeProperties;
@@ -81,7 +82,12 @@ public class TradeService {
 		emf.close();
 	}
 	
-	private static TradeDetail initializeTradeDetail(OptionPricing optionPricing, int contracts, String posEffect, String side) {
+	public static TradeDetail initializeTradeDetail(OptionPricing optionPricing, int contracts, String posEffect, String side) {
+		
+		return initializeTradeDetail(optionPricing, contracts, posEffect, side, null);
+	}
+	
+	public static TradeDetail initializeTradeDetail(OptionPricing optionPricing, int contracts, String posEffect, String side, String comment) {
 		
 		TradeDetail tradeDetail = new TradeDetail();
 		
@@ -94,6 +100,7 @@ public class TradeService {
 		tradeDetail.setStrike((double) optionPricing.getStrike());
 		tradeDetail.setSymbol(optionPricing.getSymbol());
 		tradeDetail.setType(optionPricing.getCall_put().equals("C") ? "CALL" : "PUT");
+		tradeDetail.setComment(comment);
 		
 //		Trade trade = new Trade();
 //		trade.addTradeDetail(tradeDetail);
@@ -195,6 +202,48 @@ public class TradeService {
 		em.getTransaction().commit();
 		em.close();
 		emf.close();
+	}
+
+	public static Trade openCoveredStraddle(CoveredStraddle coveredStraddle) {
+		
+		Trade trade = new Trade();
+		
+		trade.setExecTime(coveredStraddle.getShortCall().getTrade_date());
+		trade.setExp(coveredStraddle.getShortCall().getExpiration());
+		trade.setTradeType("COVERED STRADDLE");
+		double openingCost = coveredStraddle.getLongCall().getMean_price() + coveredStraddle.getLongPut().getMean_price() 
+				- coveredStraddle.getShortCall().getMean_price() - coveredStraddle.getShortPut().getMean_price();
+		trade.setOpeningCost(Math.rint(openingCost) * 100 * TradeProperties.CONTRACTS);		
+		trade.setClose_status("OPEN");
+		
+		TradeDetail shortCall = initializeTradeDetail(coveredStraddle.getShortCall(), -TradeProperties.CONTRACTS, "OPENING", "SELL");
+		TradeDetail shortPut = initializeTradeDetail(coveredStraddle.getShortPut(), -TradeProperties.CONTRACTS, "OPENING", "SELL");
+		TradeDetail longCall = initializeTradeDetail(coveredStraddle.getLongCall(), TradeProperties.CONTRACTS, "OPENING", "BUY");
+		TradeDetail longPut = initializeTradeDetail(coveredStraddle.getLongPut(), TradeProperties.CONTRACTS, "OPENING", "BUY");
+				
+		EntityManagerFactory emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
+		EntityManager em = emf.createEntityManager();
+		em.getTransaction().begin();		
+
+		em.persist(trade);
+
+		shortCall.setTrade(trade);
+		em.persist(shortCall);
+		
+		shortPut.setTrade(trade);
+		em.persist(shortPut);
+		
+		longCall.setTrade(trade);
+		em.persist(longCall);
+		
+		longPut.setTrade(trade);
+		em.persist(longPut);
+		
+		em.getTransaction().commit();
+		em.close();
+		emf.close();
+		
+		return trade;
 	}
 	
 }

@@ -145,6 +145,11 @@ public class Report {
 			}
 			writer.close();
 		}
+	}
+
+	public static void buildCoveredStraddleReport(int dte) {
+		// TODO Auto-generated method stub
+		
 	}	
 
 }

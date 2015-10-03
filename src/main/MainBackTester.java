@@ -4,8 +4,10 @@ import java.util.List;
 import java.util.Map;
 
 import trade.CloseTrade;
+import trade.CoveredStraddle;
 import trade.OpenTrade;
 import trade.Report;
+import trade.manager.CoveredCallTradeManager;
 import misc.Utils;
 import model.service.DbService;
 
@@ -27,7 +29,8 @@ public class MainBackTester {
 //		}
 		
 		//bt.ironCondorBackTest();
-		bt.coveredCallBackTest();
+		//bt.coveredCallBackTest();
+		bt.coveredStraddleBackTest();
 	}
 	
 	
@@ -77,10 +80,10 @@ public class MainBackTester {
 				
 				List<Date> expirations = null;
 				
-				if (!useWeekly) {
-					expirations = Utils.getMonthlyExpirations();
-				} else {
+				if (useWeekly) {
 					expirations = Utils.getExpirations();
+				} else {
+					expirations = Utils.getMonthlyExpirations();
 				}
 				
 				for (Date expiration : expirations) {
@@ -96,6 +99,51 @@ public class MainBackTester {
 
 		System.out.println("Finished!");
 	}
+
+	private void coveredStraddleBackTest() {
+
+		boolean useWeekly = true;
+		//int[] offsets = { -3, -2, -1, 0, 1, 2, 3, 4, 5 };
+		//int[] offsets = { 0 };
+		//int[] dtes = { 8, 15, 22, 29, 36, 43 };
+		int[] dtes = { 15 };
+		Date leapExpiration = null;
+		
+		for (int dte : dtes) {
+			
+			DbService.resetDataBase();
+			
+			List<Date> expirations = null;
+			CoveredStraddle coveredStraddle = null;
+			
+			expirations = Utils.getMonthlyExpirations();
+			if (expirations.size() > 0) {
+				leapExpiration = expirations.get(expirations.size() -1);
+			}
+			if (useWeekly) {
+				expirations = Utils.getExpirations();
+			} 
+				
+			
+			
+			for (Date expiration : expirations) {
+				coveredStraddle = OpenTrade.initializeCoveredStraddle(expiration, dte);
+				if (coveredStraddle != null) {
+					break;
+				}
+			}
+			CoveredCallTradeManager tm = new CoveredCallTradeManager(coveredStraddle, expirations);
+			tm.manageTrade();
+			
+			CloseTrade.closeTrades();
+			
+			Report.buildCoveredStraddleReport(dte);
+		}
+		
+
+		System.out.println("Finished!");
+	}
+
 
 
 

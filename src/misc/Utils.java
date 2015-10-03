@@ -12,6 +12,8 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import model.Holiday;
 import model.service.ExpirationService;
@@ -233,17 +235,12 @@ public class Utils {
 		
 		return days;
 	}
-
-	public static void main(String[] args) {
-		
-		Calendar startDate = new GregorianCalendar();
-		Calendar endDate = new GregorianCalendar();
-		
-		// Note: Months are 0 based, days are 1 based.
-		startDate.set(2015, 1, 1);		
-		endDate.set(2015,2,1);
-		
-		System.out.println("Days: " + Utils.calculateDaysBetween(startDate, endDate));
+	
+	public static Calendar dateToCal(Date date) {
+				
+		Calendar cal = Calendar.getInstance();
+		cal.setTime(date);
+		return cal;
 	}
 
 	public static int calculateDaysBetween(Date start, Date end) {
@@ -259,17 +256,59 @@ public class Utils {
 
 	public static boolean isHoliday(Calendar calendar) {
 		
-		HolidayService holidayService = HolidayService.getInstance(); 
-		Map<Date, String> holidayMap = holidayService.getHolidaysMap();
-		if (holidayMap.containsKey(calendar.getTime())) {
-			return true;
-		}
-		return false;
+		return isHoliday(calendar.getTime());
 	}
 
+	public static boolean isHoliday(Date date) {
+		
+		HolidayService holidayService = HolidayService.getInstance(); 
+		return holidayService.isHoliday(date);
+	}
+
+	public static boolean isTradableDay(Date date) {
+	
+		Calendar tradableDayCal = Calendar.getInstance();
+		tradableDayCal.clear();
+		tradableDayCal.setTime(date);
+			
+		if (tradableDayCal.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY || tradableDayCal.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) 
+			return false;
+		
+		if (isHoliday(date))
+			return false;
+		
+		return true;
+	}
+	
 	public static List<Date> getExpirations() {
 		
 		ExpirationService es = new ExpirationService(); 		
 		return es.getExpirations();
 	}
+	
+	public static void main(String[] args) {
+		
+		String url = "http://1.testom";
+        //String urlRegex = "^(https?|ftp|file)://[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]";
+        Pattern pattern = Pattern.compile("^(https?|ftp|file)://[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]");
+        Matcher matcher = pattern.matcher(url);
+        if (matcher.matches()) {
+        	System.out.println("Matches");
+        } else {
+        	System.err.println("Doesn't Match");
+        }
+		
+//		Calendar startDate = new GregorianCalendar();
+//		Calendar endDate = new GregorianCalendar();
+//		
+//		// Note: Months are 0 based, days are 1 based.
+//		startDate.set(2015, 1, 1);		
+//		endDate.set(2015,2,1);
+//		
+//		System.out.println("Days: " + Utils.calculateDaysBetween(startDate, endDate));
+		
+		
+	}
+
+	
 }
