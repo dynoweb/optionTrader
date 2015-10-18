@@ -67,6 +67,7 @@ public class OptionPricingService {
 		} catch (Exception ex) {
 			System.err.println(ex.getMessage());
 			System.err.println(" tradeDate: " + Utils.asMMddYY(tradeDate)+ " expiration: " + Utils.asMMddYY(expiration) + " strike: " + strike + " Call/Put: " + callPut);
+			ex.printStackTrace();
 			throw ex;
 		}
 		em.close();
@@ -153,6 +154,40 @@ public class OptionPricingService {
 		em.close();
 		
 		return options;
+	}
+	
+	public OptionPricing getOptionByDelta(Date tradeDate, Date expiration, String callPut, double delta) {
+		
+		OptionPricing targetOption = null;
+		double smallestDiff = 500.0;
+		
+		List<OptionPricing> optionChain = getOptionChain(tradeDate, expiration, callPut);
+		for (OptionPricing option : optionChain) {
+
+			double diffFromTarget = Math.abs(delta - option.getDelta());
+			if (diffFromTarget < smallestDiff) {
+				targetOption = option;
+				smallestDiff = diffFromTarget;
+			}
+		}		
+		return targetOption;
+	}
+
+	public OptionPricing getOptionByStrike(Date tradeDate, Date expiration, String callPut, double strike) {
+		
+		OptionPricing targetOption = null;
+		double smallestDiff = 500.0;
+		
+		List<OptionPricing> optionChain = getOptionChain(tradeDate, expiration, callPut);
+		for (OptionPricing option : optionChain) {
+
+			double diffFromTarget = Math.abs(strike - option.getStrike());
+			if (diffFromTarget < smallestDiff) {
+				targetOption = option;
+				smallestDiff = diffFromTarget;
+			}
+		}		
+		return targetOption;
 	}
 
 

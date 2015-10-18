@@ -271,7 +271,7 @@ public class OptionPricing implements Serializable {
 
 	public String toString() {
 					
-		return  TradeProperties.SYMBOL + ": " + Utils.asMMddYY(trade_date) + " " + this.adjusted_stock_close_price + "  " + Utils.asMMddYY(expiration) + strike + " " + (call_put.equals("C") ? "CALL" : "PUT") + 
+		return  TradeProperties.SYMBOL + ": TD " + Utils.asMMddYY(trade_date) + " Close " + this.adjusted_stock_close_price + " Ex " + Utils.asMMddYY(expiration) + strike + " " + (call_put.equals("C") ? "CALL" : "PUT") + 
 				" Delta: " + this.delta + " Bid: " + this.bid + " Ask:" + this.ask + " Mid: " + this.mean_price;
 	}
 

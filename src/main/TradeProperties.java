@@ -2,6 +2,8 @@ package main;
 
 public class TradeProperties {
 
+	public static final String TRADE_TYPE="COVERED_STRADDLE";  // ["COVERED_CALL", "COVERED_STRADDLE", "IRON_CONDOR"]
+	
 //	public static final String SYMBOL = "EEM";
 	public static final String SYMBOL = "IWM";
 //	public static final String SYMBOL = "SPX";

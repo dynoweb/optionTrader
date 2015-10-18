@@ -28,9 +28,20 @@ public class MainBackTester {
 //		    System.out.println ("openTradeDate: "  + openTradeDate + " optionsExpiration: " + optionsExpiration + " Days: " + TimeUnit.DAYS.convert(diff, TimeUnit.MILLISECONDS));
 //		}
 		
-		//bt.ironCondorBackTest();
-		//bt.coveredCallBackTest();
-		bt.coveredStraddleBackTest();
+		switch (TradeProperties.TRADE_TYPE) {
+		case "COVERED_CALL":
+			bt.coveredCallBackTest();
+			break;
+		case "COVERED_STRADDLE":
+			bt.coveredStraddleBackTest();
+			break;
+		case "IRON_CONDOR":
+			bt.ironCondorBackTest();
+			break;
+		default:
+			System.err.println("Unknown trade type: " + TradeProperties.TRADE_TYPE);
+			break;
+		}
 	}
 	
 	
@@ -102,12 +113,13 @@ public class MainBackTester {
 
 	private void coveredStraddleBackTest() {
 
-		boolean useWeekly = true;
+		boolean useWeekly = false;
 		//int[] offsets = { -3, -2, -1, 0, 1, 2, 3, 4, 5 };
 		//int[] offsets = { 0 };
 		//int[] dtes = { 8, 15, 22, 29, 36, 43 };
-		int[] dtes = { 15 };
+		int[] dtes = { 60 };
 		Date leapExpiration = null;
+		double initialDelta = TradeProperties.OPEN_DELTA;
 		
 		for (int dte : dtes) {
 			
@@ -127,12 +139,12 @@ public class MainBackTester {
 			
 			
 			for (Date expiration : expirations) {
-				coveredStraddle = OpenTrade.initializeCoveredStraddle(expiration, dte);
+				coveredStraddle = OpenTrade.initializeCoveredStraddle(expiration, dte, initialDelta);
 				if (coveredStraddle != null) {
 					break;
 				}
 			}
-			CoveredCallTradeManager tm = new CoveredCallTradeManager(coveredStraddle, expirations);
+			CoveredCallTradeManager tm = new CoveredCallTradeManager(coveredStraddle, expirations, dte, initialDelta);
 			tm.manageTrade();
 			
 			CloseTrade.closeTrades();

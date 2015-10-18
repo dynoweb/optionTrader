@@ -284,13 +284,13 @@ public class OpenTrade {
 				}
 			}
 		} else {
-			System.err.println("No options returns from call chain - Trade date " + Utils.asMMddYY(tradeDate) + " Expires on " + expiration);
+			System.err.println("No options returned from call chain - Trade date " + Utils.asMMddYY(tradeDate) + " Expires on " + expiration);
 		}
 		
 	}
 
 
-	public static CoveredStraddle initializeCoveredStraddle(Date expiration, int daysUntilExpiration) {
+	public static CoveredStraddle initializeCoveredStraddle(Date expiration, int daysUntilExpiration, double initialDelta) {
 
 		double smallestDiff = 100.0;
 		Date leapExpiration = null;
@@ -318,11 +318,22 @@ public class OpenTrade {
 			for (OptionPricing option : callChain) {
 
 				double diffFromPrice = Math.abs(price - option.getStrike());
-				if (diffFromPrice < smallestDiff) {
-					shortCall = option;
-					smallestDiff = diffFromPrice;
+				double diffFromDelta = Math.abs(initialDelta - option.getDelta());
+				if (initialDelta == 0.50) {
+					if (diffFromPrice < smallestDiff) {
+						shortCall = option;
+						smallestDiff = diffFromPrice;
+					}
+				} else {
+					if (diffFromDelta < smallestDiff) {
+						shortCall = option;
+						smallestDiff = diffFromDelta;
+					}
 				}
+				
 			}
+			
+			// TODO This made some assumptions about the put side - need to generalize
 			
 			// get the short put
 			callPut = "P";
@@ -341,19 +352,34 @@ public class OpenTrade {
 				if (monthlys.contains(expireDate))
 					leapExpiration = expireDate;
 			}
-			
-			// Getting the option record
-			smallestDiff = 500.0;
+						
+			// Getting the option record		
 			callPut = "C";
-			List<OptionPricing> leapCallChain = ops.getOptionChain(tradeDate, leapExpiration, callPut);
-			for (OptionPricing option : leapCallChain) {
-
-				double diffFromPrice = Math.abs(price - option.getStrike());
-				if (diffFromPrice < smallestDiff) {
-					longCall = option;
-					smallestDiff = diffFromPrice;
-				}
+			if (initialDelta == 0.50) {
+				longCall = ops.getOptionByStrike(tradeDate, leapExpiration, callPut, price);
+			} else {
+				longCall = ops.getOptionByDelta(tradeDate, leapExpiration, callPut, initialDelta);
 			}
+			
+//			smallestDiff = 500.0;
+//			callPut = "C";
+//			List<OptionPricing> leapCallChain = ops.getOptionChain(tradeDate, leapExpiration, callPut);
+//			for (OptionPricing option : leapCallChain) {
+//
+//				double diffFromPrice = Math.abs(price - option.getStrike());
+//				double diffFromDelta = Math.abs(initialDelta - option.getDelta());
+//				if (initialDelta == 0.50) {
+//					if (diffFromPrice < smallestDiff) {
+//						longCall = option;
+//						smallestDiff = diffFromPrice;
+//				}
+//				} else {
+//					if (diffFromDelta < smallestDiff) {
+//						longCall = option;
+//						smallestDiff = diffFromDelta;
+//					}
+//				}
+//			}
 			
 			callPut = "P";
 			longPut = OptionPricingService.getRecord(tradeDate, leapExpiration, longCall.getStrike(), callPut);
@@ -363,7 +389,7 @@ public class OpenTrade {
 			Trade trade = TradeService.openCoveredStraddle(coveredStraddle);
 			coveredStraddle.setTrade(trade);
 		} else {
-			System.err.println("No options returns from call chain - Trade date " + Utils.asMMddYY(tradeDate) + " Expires on " + expiration);
+			System.err.println("No options returned from call chain - Trade date " + Utils.asMMddYY(tradeDate) + " Expires on " + expiration);
 		}
 		
 		return coveredStraddle;

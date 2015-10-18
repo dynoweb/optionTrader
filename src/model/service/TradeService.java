@@ -84,17 +84,22 @@ public class TradeService {
 	
 	public static TradeDetail initializeTradeDetail(OptionPricing optionPricing, int contracts, String posEffect, String side) {
 		
-		return initializeTradeDetail(optionPricing, contracts, posEffect, side, null);
+		return initializeTradeDetail(optionPricing, contracts, posEffect, side, "Current close price: " + optionPricing.getAdjusted_stock_close_price());
 	}
 	
 	public static TradeDetail initializeTradeDetail(OptionPricing optionPricing, int contracts, String posEffect, String side, String comment) {
 		
 		TradeDetail tradeDetail = new TradeDetail();
 		
+		double price = optionPricing.getMean_price();
+		if (side.equals("BUY") && price > 0) {
+			price *= -1;
+		}
+		
 		tradeDetail.setExecTime(optionPricing.getTrade_date());
 		tradeDetail.setExp(optionPricing.getExpiration());
 		tradeDetail.setPosEffect(posEffect);
-		tradeDetail.setPrice(optionPricing.getMean_price());
+		tradeDetail.setPrice(price);
 		tradeDetail.setQty(contracts);
 		tradeDetail.setSide(side);
 		tradeDetail.setStrike((double) optionPricing.getStrike());

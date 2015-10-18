@@ -6,6 +6,7 @@ import java.util.List;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
+import javax.persistence.NoResultException;
 import javax.persistence.Persistence;
 
 import main.TradeProperties;
@@ -20,15 +21,19 @@ public class CoveredCallTradeManager {
 
 	CoveredStraddle coveredStraddle;
 	List<Date> expirations;
+	int daysTillExpiration;
+	double initialDelta;
 
 	EntityManager em = null;
 	
-	public CoveredCallTradeManager(CoveredStraddle coveredStraddle, List<Date> expirations) {
+	public CoveredCallTradeManager(CoveredStraddle coveredStraddle, List<Date> expirations, int daysTillExpiration, double initialDelta) {
 		
 		this.coveredStraddle = coveredStraddle;
 		this.expirations = expirations;
+		this.daysTillExpiration = daysTillExpiration;
+		this.initialDelta = initialDelta;
 		
-//		// A little house keeping - concurrent exception
+//		// A little house keeping - but causes a concurrent exception
 //		for (Date expiration : expirations) {
 //			if (expiration.before(this.coveredStraddle.getShortCall().getExpiration())) {
 //				expirations.remove(expirations.indexOf(expiration));
@@ -52,7 +57,7 @@ public class CoveredCallTradeManager {
 	
 	private void manageCoveredStraddle() {
 
-		// first day of trade (a trade may last several year and consist of server different transaction history)
+		// first day of trade (a trade may last several years and consist of several different transaction histories)
 		Calendar tradeDateCal = Utils.dateToCal(OptionPricingService.getFirstTradeDate());
 		Calendar lastTradeDateCal = Utils.dateToCal(OptionPricingService.getLastTradeDate());
 				
@@ -81,51 +86,77 @@ public class CoveredCallTradeManager {
 	}
 
 	private void rollShortPut(Date expiration, Date tradeDate) {
+		
+		
 	}
 	
 	private void rollShortCall(Date expiration, Date tradeDate) {
 		
 		OptionPricing shortCall = coveredStraddle.getShortCall();
-		
-		// Already rolled to the next expiration, no action required
-		if (!shortCall.getExpiration().equals(expiration) || tradeDate.after(expiration)) {
+
+		// If tradeDate after expiration
+		if (tradeDate.after(expiration)) {
 			return;
 		}
+		// Already rolled to the next expiration, no action required
+		if (!shortCall.getExpiration().equals(expiration)) {
+			return;
+		}
+		
+		Calendar tradeDateCal = Calendar.getInstance();
+		tradeDateCal.setTime(tradeDate);
 		
 		// Check the current status of the position
 		OptionPricing option = OptionPricingService.getRecord(tradeDate, shortCall.getExpiration(), shortCall.getStrike(), "C");
 		
 		
-		// Roll if delta is less than 0.10 or and ITM and 2 days until expiration (Thursday EOD)
+		// Roll if delta is less than 0.10 or ITM and 2 days until expiration (Thursday EOD)
+		// also if expiration is on a Mon or Tue (qrtly) need to move back the by date
 		// calculate roll deadline
 		Calendar rollByDate = Calendar.getInstance();
 		rollByDate.setTime(shortCall.getExpiration());
-		rollByDate.add(Calendar.DATE, -2);
+		rollByDate.add(Calendar.DATE, -1);	// going back 2 days, but need to loop only 1
+		do {
+			rollByDate.add(Calendar.DATE, -1);
+		} while (!Utils.isTradableDay(rollByDate.getTime()));
 		
-		Calendar tradeDateCal = Calendar.getInstance();
-		tradeDateCal.setTime(option.getTrade_date());
-		
-		//roll to the next month
-		if (tradeDateCal.equals(rollByDate)) {
-			rollToNextPeriod(option, "TIME");
+		//roll to the next period
+		if (tradeDateCal.equals(rollByDate) || tradeDateCal.after(rollByDate)) {
+			rollToNextPeriodTypeII(option, "TIME");
 			return;
 		}
 			
 		if (option.getMean_price() < 0.1) {
-			rollToNextPeriod(option, "PRICE");
+			rollToNextPeriodTypeII(option, "PRICE");
 			return;
 		}
 	}
 
-	private void rollToNextPeriod(OptionPricing option, String rollComment) {
+	/**
+	 * This rolls the next call up to the first ITM strike or rolls down to the first OTM strike.
+	 * Seems really hard to make a profit on IWM
+	 * 
+	 * @param option
+	 * @param rollComment
+	 */
+	private void rollToNextPeriodTypeI(OptionPricing option, String rollComment) {
 		
-		// TODO need to consider rules for rolling up or down or letting it get assigned
 		// Getting next expiration to potentially roll to
 		int currentExpIndex = expirations.indexOf(option.getExpiration());
-		
-		Date nextExpiration = expirations.get(currentExpIndex + 1);
-		
-		System.out.println("Expecting to roll " + option);
+
+		// Roll to next expiration considering DTE
+		Date nextExpiration = null;
+		do {
+			currentExpIndex += 1;
+			if (expirations.size() > currentExpIndex) {
+				nextExpiration = expirations.get(currentExpIndex);
+			} else {
+				System.err.println("Unable to roll to next expiration");
+				return;
+			}
+		} while (Utils.calculateDaysBetween(option.getTrade_date(), nextExpiration) <= this.daysTillExpiration);
+			
+		System.out.println("Rolling " + option);
 		
 		// Close current option
 		TradeDetail closeShortCall = TradeService.initializeTradeDetail(option, TradeProperties.CONTRACTS, "CLOSING", "BUY", rollComment);
@@ -133,13 +164,94 @@ public class CoveredCallTradeManager {
 		closeShortCall.setTrade(this.coveredStraddle.getTrade());		
 		em.persist(closeShortCall);
 
-		double nextShortStrike = Math.min(option.getStrike(), Math.ceil(option.getAdjusted_stock_close_price()));
+		// Rolling strategy - roll up under price or down above price
+		// could consider a strategy that only rolls 1/2 or 1/3 up to price 
+		// If rolling down, roll to next strike above price, if rolling up, roll to first strike less than price.
+		double nextShortStrike = 0.0;		
+		if (option.getStrike() < option.getAdjusted_stock_close_price()) {	
+			// roll down and out or just out
+			nextShortStrike = Math.floor(option.getAdjusted_stock_close_price());
+		} else { 
+			// roll up and out
+			nextShortStrike = Math.ceil(option.getAdjusted_stock_close_price());
+		}
 		
-		// Get next short Call
-		option = OptionPricingService.getRecord(option.getTrade_date(), nextExpiration, nextShortStrike, option.getCall_put());
+		try {
+			// Get next short Call
+			option = OptionPricingService.getRecord(option.getTrade_date(), nextExpiration, nextShortStrike, option.getCall_put());
+		} catch (NoResultException ex) {
+			// try to get next expiration
+			currentExpIndex = expirations.indexOf(nextExpiration);
+			option = OptionPricingService.getRecord(option.getTrade_date(), expirations.get(currentExpIndex + 1), nextShortStrike, option.getCall_put());
+		}
 		this.coveredStraddle.setShortCall(option);
 		
 		TradeDetail openShortCall = TradeService.initializeTradeDetail(option, - TradeProperties.CONTRACTS, "OPENING", "SELL", "SELLING - stock price: " + option.getAdjusted_stock_close_price());
+		openShortCall.setTrade(this.coveredStraddle.getTrade());
+		em.persist(openShortCall);
+
+	}
+
+	/**
+	 * This rolls the call to a initial delta value (for example 0.30)
+	 * 
+	 * @param option
+	 * @param rollComment
+	 */
+	private void rollToNextPeriodTypeII(OptionPricing option, String rollComment) {
+		
+		// Getting next expiration to potentially roll to
+		int currentExpIndex = expirations.indexOf(option.getExpiration());
+
+		// Roll to next expiration considering DTE
+		Date nextExpiration = null;
+		do {
+			currentExpIndex += 1;
+			if (expirations.size() > currentExpIndex) {
+				nextExpiration = expirations.get(currentExpIndex);
+			} else {
+				System.err.println("Unable to roll to next expiration");
+				return;
+			}
+		} while (Utils.calculateDaysBetween(option.getTrade_date(), nextExpiration) <= this.daysTillExpiration);
+			
+		System.out.println("Rolling " + option);
+		
+		// Close current option
+		TradeDetail closeShortCall = TradeService.initializeTradeDetail(option, TradeProperties.CONTRACTS, "CLOSING", "BUY", rollComment);
+		
+		closeShortCall.setTrade(this.coveredStraddle.getTrade());		
+		em.persist(closeShortCall);
+
+		// ------------------------------------------------------------------------------------------
+		// Rolling strategy 
+		//  if Delta is > .7 roll up to .7, if delta is < 0.7 and ITM no change, if OTM roll to 0.3 
+		// ------------------------------------------------------------------------------------------
+		double nextShortStrike = 0.0;	
+		// Get next short Call - this option is the one if it's just rolled to the next expiration
+		OptionPricing nextOption = OptionPricingService.getRecord(option.getTrade_date(), nextExpiration, option.getStrike(), option.getCall_put());
+		
+		double targetDelta = 0.0;	// no change
+		
+		// Are we deep ITM?
+		if (nextOption.getDelta() > (1 - initialDelta)) {
+			// target delta is ITM
+			targetDelta = 1 - initialDelta;
+		} else if (nextOption.getStrike() > nextOption.getAdjusted_stock_close_price()) {
+			// if OTM roll to 0.3
+			targetDelta = initialDelta;
+		}
+		
+		// now to roll strike to new price
+		if (targetDelta > 0.0) {
+			OptionPricingService ops = new OptionPricingService();
+			String callPut = "C";
+			nextOption = ops.getOptionByDelta(option.getTrade_date(), nextExpiration, callPut , targetDelta);
+		}
+		
+		this.coveredStraddle.setShortCall(nextOption);
+		
+		TradeDetail openShortCall = TradeService.initializeTradeDetail(nextOption, - TradeProperties.CONTRACTS, "OPENING", "SELL", "SELLING - stock price: " + option.getAdjusted_stock_close_price());
 		openShortCall.setTrade(this.coveredStraddle.getTrade());
 		em.persist(openShortCall);
 
