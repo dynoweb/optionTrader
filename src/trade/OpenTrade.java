@@ -139,17 +139,7 @@ public class OpenTrade {
 	private static VerticalSpread openPutSpread(List<OptionPricing> putChain, double openDelta, double spreadWidth) {
 		
 		// Build Pub Bull Debit Spread
-		// find short put at delta
-		OptionPricing shortPut = null;
-		double smallestDiff = 1.0;
-		for (OptionPricing put : putChain) {
-			
-			double diffFromDelta = Math.abs(openDelta + put.getDelta());
-			if (diffFromDelta < smallestDiff) {
-				shortPut = put;
-				smallestDiff = diffFromDelta;
-			}
-		}
+		OptionPricing shortPut = findOptionAtDelta(putChain, openDelta);
 		if (shortPut == null) {
 			System.err.println("Could not find a suitable put");
 		}
@@ -184,6 +174,30 @@ public class OpenTrade {
 		putSpread.setShortOptionOpen(shortPut);
 
 		return putSpread;
+	}
+
+
+	/**
+	 * Returns the option nearest the specified delta
+	 * 
+	 * @param optionChain
+	 * @param targetDelta
+	 * @return OptionPricing
+	 */
+	private static OptionPricing findOptionAtDelta(List<OptionPricing> optionChain, double targetDelta) {
+		
+		// find option at delta
+		OptionPricing option = null;
+		double smallestDiff = 1.0;
+		for (OptionPricing opt : optionChain) {
+			
+			double diffFromDelta = Math.abs(targetDelta - Math.abs(opt.getDelta()));
+			if (diffFromDelta < smallestDiff) {
+				option = opt;
+				smallestDiff = diffFromDelta;
+			}
+		}
+		return option;
 	}
 
 	private static VerticalSpread openCallSpread(List<OptionPricing> callChain, double openDelta, double spreadWidth) {
@@ -257,36 +271,26 @@ public class OpenTrade {
 	 * Builds a covered call trade
 	 * @param expiration
 	 * @param daysUntilExpiration
-	 * @param offset - Strikes from ATM, 0 represents closest to ATM, 
-	 * 		+1 is next strike OTM and -1 is first strike ITM.
+	 * @param delta - used for short strike selection
 	 */
-	public static void coveredCall(Date expiration, int daysUntilExpiration, int offset) {
+	public static void coveredCall(Date expiration, int daysUntilExpiration, double delta) {
 
 		String callPut = "C";
 
 		Date tradeDate = Utils.getTradeDate(expiration, daysUntilExpiration);
-		
+
 		OptionPricingService ops = new OptionPricingService();
 		List<OptionPricing> callChain = ops.getOptionChain(tradeDate, expiration, callPut);
 		
-
 		if (callChain.size() > 0) {
-			System.out.println("Trading a Covered Call on " + Utils.asMMddYY(tradeDate) + " Expires on " + expiration);
+			
+			OptionPricing callOption = findOptionAtDelta(callChain, delta);
+					
+			double price = callOption.getAdjusted_stock_close_price();
+			System.out.println("Trading a Covered Call on " + Utils.asMMddYY(tradeDate) + " Expires on " + Utils.asMMddYY(expiration) + " Current price: " + price);
 
-			double stockPrice = callChain.get(0).getAdjusted_stock_close_price();
-			
-			double price = Math.rint(stockPrice) + offset;
-			
-			for (OptionPricing option : callChain) {
-				
-				if (option.getStrike() == price) {
-					TradeService.openCoveredCall(option);
-				}
-			}
-		} else {
-			System.err.println("No options returned from call chain - Trade date " + Utils.asMMddYY(tradeDate) + " Expires on " + expiration);
+			TradeService.openCoveredCall(callOption);
 		}
-		
 	}
 
 
@@ -394,5 +398,26 @@ public class OpenTrade {
 		
 		return coveredStraddle;
 	}
+
+
+	public static void findShortPutSpread(Date tradeDate, Date expiration, double delta, double spreadWidth) {
+
+		String callPut = "P";
+		OptionPricingService ops = new OptionPricingService();
+		List<OptionPricing> putChain = ops.getOptionChain(tradeDate, expiration, callPut);
+		
+	    if (!putChain.isEmpty()) {
+	    	try {
+	    		VerticalSpread putSpread = openPutSpread(putChain, delta, spreadWidth);
+	        	TradeService.recordShortPutSpread(putSpread);
+	    	} catch (Exception ex) {
+	    		ex.printStackTrace();
+	    		System.err.println("Problem with put chain");
+	    	}
+	    } else {
+	    	System.err.println("Put chain is empty for tradeDate: " + tradeDate + " and expiration: " + expiration);
+	    }
+	}
+
 
 }

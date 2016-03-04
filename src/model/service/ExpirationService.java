@@ -18,7 +18,7 @@ public class ExpirationService {
 
 	/**
 	 * Returns a list of all the expiration dates for a particular set of optionPricing 
-	 * @param symbol required to be in mixed case with the first char upper case for example SPX
+	 * @param symbol required to be in mixed case with the first char upper case for example Spx
 	 * @return
 	 */
 	public List<Date> getExpirations() {		
@@ -39,6 +39,38 @@ public class ExpirationService {
 		
 //		query.setParameter("tradeDate", tradeDate);
 //		query.setParameter("expiration", expiration);
+//		query.setParameter("call_put", callPut);
+
+		List<Date> dates = query.getResultList();
+		em.close();
+		return dates;		
+	}
+	
+	
+	/**
+	 * Trying to find the latest trade date for a given expiration
+	 * 
+	 * @param expiration
+	 * @return
+	 */
+	public List<Date> getTradeDatesForExpiration(Date expiration) {
+		
+		EntityManagerFactory emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
+		EntityManager em = emf.createEntityManager();
+	
+		// Note: table name refers to the Entity Class and is case sensitive
+		//       field names are property names in the Entity Class
+		Query query = em.createQuery("select distinct(opt.trade_date) from " + TradeProperties.SYMBOL_FOR_QUERY + " opt "
+				+ "where "
+//				+ "opt.trade_date = :tradeDate " 
+				+ "opt.expiration=:expiration "	
+//				+ "and opt.call_put = :call_put "
+//				+ "and opt.delta > 0.04 "
+//				+ "and opt.delta < 0.96 "
+				+ "order by opt.trade_date");
+		
+//		query.setParameter("tradeDate", tradeDate);
+		query.setParameter("expiration", expiration);
 //		query.setParameter("call_put", callPut);
 
 		List<Date> dates = query.getResultList();
@@ -73,7 +105,18 @@ public class ExpirationService {
 	public static void main(String[] arg) {
 		
 		ExpirationService es = new ExpirationService();
-		List<Date> dates = es.getPotentialMonthlyExpirations();
+//		List<Date> dates = es.getPotentialMonthlyExpirations();
+//		for (Date date : dates) {
+//			
+//			System.out.println(Utils.asMMddYY(date));
+//		}
+		Calendar cal = Calendar.getInstance();
+		cal.set(2008, 1, 16);
+		
+		List<Date> dates = es.getTradeDatesForExpiration(cal.getTime());
+		if (dates.size() == 0) {
+			System.out.println("No dates returned");
+		}
 		for (Date date : dates) {
 			
 			System.out.println(Utils.asMMddYY(date));

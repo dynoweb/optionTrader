@@ -99,7 +99,7 @@ public class TradeService {
 		tradeDetail.setExecTime(optionPricing.getTrade_date());
 		tradeDetail.setExp(optionPricing.getExpiration());
 		tradeDetail.setPosEffect(posEffect);
-		tradeDetail.setPrice(price);
+		tradeDetail.setPrice(Utils.round(price, 2));
 		tradeDetail.setQty(contracts);
 		tradeDetail.setSide(side);
 		tradeDetail.setStrike((double) optionPricing.getStrike());
@@ -183,7 +183,8 @@ public class TradeService {
 
 		longStock.setExecTime(option.getTrade_date());
 		//longStock.setExp(option.getExpiration());
-		longStock.setPrice(Utils.round(option.getAdjusted_stock_close_price(),2));
+		// buying back an open positions
+		longStock.setPrice(-Utils.round(option.getAdjusted_stock_close_price(),2));
 		longStock.setPosEffect("OPENING");
 		longStock.setQty(TradeProperties.CONTRACTS * 100);
 		longStock.setSide("BUY");
@@ -251,4 +252,45 @@ public class TradeService {
 		return trade;
 	}
 	
+	public static void recordShortPutSpread(VerticalSpread putSpread)
+	{
+		Trade trade = new Trade();
+		int contracts = TradeProperties.CONTRACTS;
+		
+		TradeDetail shortPut = null;
+		TradeDetail longPut = null;
+    	try {
+			shortPut = initializeTradeDetail(putSpread.getShortOptionOpen(), -contracts, "OPENING", "SELL");
+    		longPut = initializeTradeDetail(putSpread.getLongOptionOpen(), contracts, "OPENING", "BUY");
+    	} catch (Exception ex) {
+    		ex.printStackTrace();
+    		throw ex;
+    	}
+		
+		trade.setExecTime(shortPut.getExecTime());
+		trade.setExp(shortPut.getExp());
+		trade.setTradeType("SHORT PUT SPREAD");
+		trade.setClose_status("OPEN");
+		
+		double openingCost = Utils.round(shortPut.getPrice() * 100 + 
+										  longPut.getPrice() * 100, 2);
+		trade.setOpeningCost(openingCost);
+
+		EntityManagerFactory emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
+		EntityManager em = emf.createEntityManager();
+		
+		em.getTransaction().begin();		
+		em.persist(trade);
+		
+		shortPut.setTrade(trade);
+		em.persist(shortPut);
+		
+		longPut.setTrade(trade);
+		em.persist(longPut);
+		
+		em.getTransaction().commit();
+		em.close();
+		emf.close();
+	}
+
 }

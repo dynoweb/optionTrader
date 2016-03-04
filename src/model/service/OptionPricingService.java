@@ -5,6 +5,7 @@ import java.util.List;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
+import javax.persistence.NoResultException;
 import javax.persistence.Persistence;
 import javax.persistence.Query;
 
@@ -109,6 +110,35 @@ public class OptionPricingService {
 		return firstTradeDate;
 	}
 
+	public static double getPriceOnDate(Date tradeDate) throws NoResultException {
+		
+		EntityManagerFactory emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
+		EntityManager em = emf.createEntityManager();
+		double closePrice = 0;
+		
+		// Note: table name refers to the Entity Class and is case sensitive
+		//       field names are property names in the Entity Class
+		Query query = em.createQuery("select opt.adjusted_stock_close_price from " + TradeProperties.SYMBOL_FOR_QUERY + " opt where "
+				+ "opt.trade_date = :tradeDate ");
+		query.setParameter("tradeDate", tradeDate);
+		
+		query.setHint("odb.read-only", "true");
+
+		query.setMaxResults(1);
+		
+		try {
+			closePrice = (double) query.getSingleResult();
+		} catch (NoResultException ex) {
+			System.err.println("Error getting price on " + tradeDate);
+			ex.printStackTrace();
+//			throw ex;
+		} finally {
+			em.close();
+		}
+		
+		return closePrice;
+	}
+
 	public List<Date> getExpirationsForTradeDate(Date tradeDate) {
 
 		EntityManagerFactory emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
@@ -187,6 +217,9 @@ public class OptionPricingService {
 				smallestDiff = diffFromTarget;
 			}
 		}		
+		if (targetOption == null) {
+			System.err.println("Not able to find a matching option");
+		}
 		return targetOption;
 	}
 

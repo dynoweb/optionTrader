@@ -15,17 +15,19 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import main.TradeProperties;
 import model.Holiday;
 import model.service.ExpirationService;
 import model.service.HolidayService;
+import model.service.MarketOpenService;
 import model.service.OptionsExpirationService;
 
 public class Utils {
 
 	// ProjectProperties.dateFormat.format(longOptionOpen.getExpiration())
-	public static SimpleDateFormat dateFormat = new SimpleDateFormat("MMM dd, YYYY ");
-	public static SimpleDateFormat shortDateFormat = new SimpleDateFormat("MM-dd-YY ");
-	public static SimpleDateFormat abriviatedDateFormat = new SimpleDateFormat("MM YY ");
+	public static SimpleDateFormat dateFormat = new SimpleDateFormat("MMM dd, yyyy ");
+	public static SimpleDateFormat shortDateFormat = new SimpleDateFormat("MM-dd-yy ");
+	public static SimpleDateFormat abriviatedDateFormat = new SimpleDateFormat("MM yy ");
 	
 	// ProjectProperties.df.format(54.680054);
 	public static DecimalFormat df = new DecimalFormat("#.00");
@@ -43,7 +45,12 @@ public class Utils {
 	}
 	
 	public static String asMMddYY(Date date) {
-		return shortDateFormat.format(date);
+		try {
+			return shortDateFormat.format(date);
+		} catch (Exception e) {
+			e.printStackTrace();
+			return "MMddYY";
+		}
 	}
 	
 	public static String asMMYY(Date date) {
@@ -140,6 +147,12 @@ public class Utils {
 		return es.getPotentialMonthlyExpirations();
 	}
 	
+	public static List<Date> getWeeklyExpirations() {
+		
+		ExpirationService es = new ExpirationService(); 		
+		return es.getExpirations();
+	}
+	
 	/**
 	 * Determines the trades in order to have the expiration as close to DTE
 	 * 
@@ -160,6 +173,42 @@ public class Utils {
 	}
 
 	/**
+	 * Determines the weekly trades in order to have the expiration as close to DTE
+	 * 
+	 * @param dte number of days until expiration
+	 * @return
+	 * 		Map - key: Date tradeOpenDate, value: Date expirationDate
+	 */
+	public static Map<Date, Date> getPotentialWeeklyTrades(int dte) {				
+		
+		Map<Date, Date> tradeDates = new LinkedHashMap<Date, Date>();
+		List<Date> expirations = getWeeklyExpirations();
+		List<Date> tradeDays = getTradeDays();
+		
+		if (tradeDays.size() > 0) {
+			Date firstTradeDay = tradeDays.get(0);
+			Date lastTradeDay = tradeDays.get(tradeDays.size() - 1);
+		
+			for (Date expiration : expirations) {
+				if (calculateDaysBetween(firstTradeDay, expiration) > TradeProperties.OPEN_DTE &&
+					expiration.getTime() < lastTradeDay.getTime()) 
+				{
+					// TODO - this could use the tradeDays list to find a day in this list
+					Date openTradeDate = getTradeDate(expiration, dte);
+					tradeDates.put(openTradeDate, expiration);
+				}
+			}
+		}
+		return tradeDates;
+	}
+
+	private static List<Date> getTradeDays() {
+		
+		MarketOpenService mos = new MarketOpenService();		
+		return mos.getTradeDates();
+	}
+
+	/**
 	 * Determines the trade date to open a trade in order to have the expiration as close to DTE
 	 * @param expiration (Friday expiration)
 	 * @param dte number of days until expiration
@@ -168,36 +217,42 @@ public class Utils {
 	 */
 	public static Date getTradeDate(Date expiration, int dte) {				
 		
-		HolidayService hs = HolidayService.getInstance();
-		Map<Date, String> holidaysMap = hs.getHolidaysMap();
+//		HolidayService hs = HolidayService.getInstance();
+//		Map<Date, String> holidaysMap = hs.getHolidaysMap();
 		
 		Calendar tradeDayCal = Calendar.getInstance();
 		tradeDayCal.clear();
 		tradeDayCal.setTime(expiration);
-		tradeDayCal.add(Calendar.DATE, -dte);			
+		tradeDayCal.add(Calendar.DATE, -dte);	
+		
+		//System.out.println("tradeDay: " + tradeDayCal.getTime());
+		
+		while (!Utils.isTradableDay(tradeDayCal.getTime())) {
+			tradeDayCal.add(Calendar.DATE, -1);
+		}
 			
-		if (tradeDayCal.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY) {
-			tradeDayCal.add(Calendar.DATE, -1); 	// Go back to Friday
-			if (holidaysMap.containsKey(tradeDayCal.getTime())) {
-				tradeDayCal.add(Calendar.DATE, -1); 	// Go back to Thurs
-			}
-		} else if (tradeDayCal.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) {
-			tradeDayCal.add(Calendar.DATE, 1);		// Go to Monday
-			if (holidaysMap.containsKey(tradeDayCal.getTime())) {
-				tradeDayCal.add(Calendar.DATE, 1);		// Go to Tues
-			}
-		}
-		
-		if (holidaysMap.containsKey(tradeDayCal.getTime())) {
-			if (tradeDayCal.get(Calendar.DAY_OF_WEEK) == Calendar.FRIDAY) {
-				tradeDayCal.add(Calendar.DATE, -1); 	// Go back to Thur
-			}
-			if (tradeDayCal.get(Calendar.DAY_OF_WEEK) == Calendar.MONDAY) {
-				tradeDayCal.add(Calendar.DATE, 1); 	// Go back to Tue
-			}
-		}
-		
-		System.out.println("getNextTradeDates: " + asMMMddYYYY(tradeDayCal.getTime()) + " " + asMMMddYYYY(expiration));
+//		if (tradeDayCal.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY) {
+//			tradeDayCal.add(Calendar.DATE, -1); 	// Go back to Friday
+//			if (holidaysMap.containsKey(tradeDayCal.getTime())) {
+//				tradeDayCal.add(Calendar.DATE, -1); 	// Go back to Thurs
+//			}
+//		} else if (tradeDayCal.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) {
+//			tradeDayCal.add(Calendar.DATE, 1);		// Go to Monday
+//			if (holidaysMap.containsKey(tradeDayCal.getTime())) {
+//				tradeDayCal.add(Calendar.DATE, 1);		// Go to Tues
+//			}
+//		}
+//		
+//		if (holidaysMap.containsKey(tradeDayCal.getTime())) {
+//			if (tradeDayCal.get(Calendar.DAY_OF_WEEK) == Calendar.FRIDAY) {
+//				tradeDayCal.add(Calendar.DATE, -1); 	// Go back to Thur
+//			}
+//			if (tradeDayCal.get(Calendar.DAY_OF_WEEK) == Calendar.MONDAY) {
+//				tradeDayCal.add(Calendar.DATE, 1); 	// Go back to Tue
+//			}
+//		}
+//
+		System.out.println("getNextTradeDate: " + Utils.asMMMddYYYY(tradeDayCal.getTime()) + " for expiration: " + asMMMddYYYY(expiration));
 		
 		return tradeDayCal.getTime();
 	}
@@ -288,15 +343,15 @@ public class Utils {
 	
 	public static void main(String[] args) {
 		
-		String url = "http://1.testom";
+		//String url = "http://1.testom";
         //String urlRegex = "^(https?|ftp|file)://[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]";
-        Pattern pattern = Pattern.compile("^(https?|ftp|file)://[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]");
-        Matcher matcher = pattern.matcher(url);
-        if (matcher.matches()) {
-        	System.out.println("Matches");
-        } else {
-        	System.err.println("Doesn't Match");
-        }
+        //Pattern pattern = Pattern.compile("^(https?|ftp|file)://[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]");
+        //Matcher matcher = pattern.matcher(url);
+        //if (matcher.matches()) {
+        //	System.out.println("Matches");
+        //} else {
+        //	System.err.println("Doesn't Match");
+        //}
 		
 //		Calendar startDate = new GregorianCalendar();
 //		Calendar endDate = new GregorianCalendar();
@@ -307,7 +362,15 @@ public class Utils {
 //		
 //		System.out.println("Days: " + Utils.calculateDaysBetween(startDate, endDate));
 		
+		SimpleDateFormat sdf = new SimpleDateFormat("MMM dd, yyyy ");		
 		
+		Date date = new Date(2009-1900, 11, 29);
+		System.out.println("Date: " + date);
+		System.out.println("Formated: " + sdf.format(date));
+		
+		date = new Date(2010-1900, 0, 1);
+		System.out.println("Date: " + date);
+		System.out.println("Formated: " + sdf.format(date));
 	}
 
 	

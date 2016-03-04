@@ -28,6 +28,7 @@ public class HolidayService {
 	protected HolidayService() {
 		
 		emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
+		getHolidays();
 	}
 
 	public static HolidayService getInstance() {
