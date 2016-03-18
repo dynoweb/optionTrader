@@ -409,7 +409,8 @@ public class OpenTrade {
 	    if (!putChain.isEmpty()) {
 	    	try {
 	    		VerticalSpread putSpread = openPutSpread(putChain, delta, spreadWidth);
-	        	TradeService.recordShortPutSpread(putSpread);
+	    		if (putSpread.getOpenCost() != 0.0 && putSpread.getShortOptionOpen().getDelta() != 0 && putSpread.getLongOptionOpen().getDelta() != 0)
+	    			TradeService.recordShortPutSpread(putSpread);
 	    	} catch (Exception ex) {
 	    		ex.printStackTrace();
 	    		System.err.println("Problem with put chain");
