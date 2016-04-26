@@ -448,11 +448,13 @@ public class CloseTrade {
 			// Close the Iron Condor
 			if (longCall != null && shortCall != null && longPut != null && shortPut != null) {
 				
-				System.out.println("Time Closing Cost: " + Utils.round(longCall.getMean_price(),2) + " - " + Utils.round(shortCall.getMean_price(),2) + " + " 
-													 + Utils.round(longPut.getMean_price(),2) + " - " + Utils.round(shortPut.getMean_price(),2));
+				System.out.println("Time Closing Cost: " + (Utils.round(longPut.getMean_price() * 100 - shortPut.getMean_price() * 100, 2) +
+						 Utils.round(longCall.getMean_price() * 100 - shortCall.getMean_price() * 100, 2)));
 				
-				trade.setClosingCost(Utils.round(longCall.getMean_price() - shortCall.getMean_price() + longPut.getMean_price() - shortPut.getMean_price(), 2));
-				trade.setProfit(Utils.round(trade.getClosingCost() - trade.getOpeningCost(),2));
+				trade.setClosingCost(Utils.round(longPut.getMean_price() * 100 - shortPut.getMean_price() * 100, 2) +
+									 Utils.round(longCall.getMean_price() * 100 - shortCall.getMean_price() * 100, 2));
+				
+				trade.setProfit(Utils.round(trade.getClosingCost() + trade.getOpeningCost(),2));
 				trade.setClose_status(TradeProperties.CLOSE_DTE + " DTE TIME CLOSE");
 				trade.setCloseDate(cal.getTime());
 				
@@ -466,8 +468,9 @@ public class CloseTrade {
 				System.out.println("Time Closing Cost: " +  
 													 + Utils.round(longPut.getMean_price(),2) + " - " + Utils.round(shortPut.getMean_price(),2));
 				
-				trade.setClosingCost(Utils.round(longPut.getMean_price() * 100 
-						- shortPut.getMean_price() * 100, 2));
+				double cc = Utils.round(longPut.getMean_price() * 100 - shortPut.getMean_price() * 100, 2);
+				// should not be able to close for a credit, it should always cost something or be zero, never a credit
+				trade.setClosingCost(Math.min(0.0, cc));
 				trade.setProfit(Utils.round(trade.getClosingCost() + trade.getOpeningCost(),2));
 				trade.setClose_status(TradeProperties.CLOSE_DTE + " DTE TIME CLOSE");
 				trade.setCloseDate(cal.getTime());

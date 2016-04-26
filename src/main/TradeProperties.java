@@ -22,9 +22,9 @@ public class TradeProperties {
 	// Delta = 0.0228 - 2 SD
 	//
 	// Open trade properties
-	public static double OPEN_DELTA = 0.05;
+	public static double OPEN_DELTA = 0.0228;
 	public static int OPEN_DTE = 7;
-	public static double SPREAD_WIDTH = 100.0;
+	public static double SPREAD_WIDTH = 5.0;
 	
 	// Close trade properties
 	public static double PROFIT_TARGET = 0.0;  // 0.50 - 50% of max potential

@@ -55,8 +55,9 @@ public class TradeService {
 		trade.setTradeType("IRON CONDOR");
 		trade.setClose_status("OPEN");
 		
-		double openingCost = Utils.round(shortCall.getPrice() * shortCall.getQty() + longCall.getPrice() * longCall.getQty() +
-				 shortPut.getPrice() * shortPut.getQty() + longPut.getPrice() * longPut.getQty(), 2);
+		double openingCost = Utils.round(shortPut.getPrice() * 100 + longPut.getPrice() * 100, 2) +
+							 Utils.round(shortCall.getPrice() * 100 + longCall.getPrice() * 100, 2);
+				 
 		trade.setOpeningCost(openingCost);
 
 		EntityManagerFactory emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");

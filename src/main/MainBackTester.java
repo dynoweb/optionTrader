@@ -50,9 +50,11 @@ public class MainBackTester {
 	
 	private void ironCondorBackTest() {
 	
-		double[] spreadWidths = { 1.0, 2.0, 3.0, 5.0, 10 };
-		//double[] deltas = {0.0228, 0.0668, 0.1, 0.1587, 0.2, 0.3}; 
-		double[] deltas = {0.0228, 0.0668, 0.1, 0.1587, 0.2, 0.3}; 
+		//double[] spreadWidths = { TradeProperties.SPREAD_WIDTH }; 
+		double[] spreadWidths = { 5 }; //, 10, 25, 50 };
+		//double[] spreadWidths = { 1.0, 2.0, 3.0, 5.0, 10 };
+		//double[] deltas = {TradeProperties.OPEN_DELTA};
+		double[] deltas = {0.0228}; //, 0.0668, 0.1, 0.1587, 0.2, 0.3, 0.35}; 
 		for (double delta : deltas) {
 		
 			for (double spreadWidth : spreadWidths) {
@@ -166,16 +168,16 @@ public class MainBackTester {
 
 	private void shortPutSpreadTest() {
 		
-		double[] spreadWidths = { 5, 10, 25, 50 };
-		//double[] spreadWidths = { 1.0, 2.0, 3.0, 5.0, 10 };
 		//double[] spreadWidths = { TradeProperties.SPREAD_WIDTH }; 
+		double[] spreadWidths = { 5, 10, 25 };
+		//double[] spreadWidths = { 1.0, 2.0, 3.0, 5.0, 10 };
+		//double[] deltas = {TradeProperties.OPEN_DELTA};
 		//double[] deltas = {0.0228, 0.0668, 0.1, 0.1587, 0.2, 0.3}; 
-		//double[] deltas = {0.0228, 0.0668, 0.1, 0.1587, 0.2, 0.3};
-		//double[] deltas = {0.1, 0.1587, 0.2, 0.31};
+		//double[] deltas = {0.0228, 0.0668};
+		double[] deltas = {0.0228, 0.0668, 0.1, 0.1587, 0.2, 0.3};
 		//double[] deltas = {0.25};
-		double[] deltas = {TradeProperties.OPEN_DELTA};
-		int[] openDte = {TradeProperties.OPEN_DTE};
-		//int[] openDte = {30, 45, 60};
+		//int[] openDte = {TradeProperties.OPEN_DTE};
+		int[] openDte = {7, 14, 28, 45};
 		
 		for (int dte :  openDte) {
 			

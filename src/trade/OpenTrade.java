@@ -138,7 +138,10 @@ public class OpenTrade {
 	
 	private static VerticalSpread openPutSpread(List<OptionPricing> putChain, double openDelta, double spreadWidth) {
 		
-		// Build Pub Bull Debit Spread
+		// set to true if creating a spread of 1 buy 1 isn't available, then find the next available option
+		boolean enableWidthExtention = false;
+		
+		// Build Put Bull Debit Spread
 		OptionPricing shortPut = findOptionAtDelta(putChain, openDelta);
 		if (shortPut == null) {
 			System.err.println("Could not find a suitable put");
@@ -154,7 +157,9 @@ public class OpenTrade {
 				break;
 			}
 		}
-		if (longPut == null) {
+		
+		// Add a non-standard spread width long put
+		if (enableWidthExtention && longPut == null) {
 			OptionPricing longPutCandidate = null;
 			System.err.println("Could not pair up short put with a long put");
 			double diff = 1000;
@@ -409,8 +414,18 @@ public class OpenTrade {
 	    if (!putChain.isEmpty()) {
 	    	try {
 	    		VerticalSpread putSpread = openPutSpread(putChain, delta, spreadWidth);
-	    		if (putSpread.getOpenCost() != 0.0 && putSpread.getShortOptionOpen().getDelta() != 0 && putSpread.getLongOptionOpen().getDelta() != 0)
-	    			TradeService.recordShortPutSpread(putSpread);
+	    		// found long and short contract
+	    		if (putSpread.getShortOptionOpen() != null && putSpread.getLongOptionOpen() != null
+	    				// long option is priced
+	    				&& putSpread.getLongOptionOpen().getBid() != 0 && putSpread.getLongOptionOpen().getAsk() != 0
+	    				// short option is priced
+	    				&& putSpread.getShortOptionOpen().getBid() != 0 && putSpread.getShortOptionOpen().getAsk() != 0
+	    				// credit is created
+	    				&& putSpread.getOpenCost() < 0) { 
+	    			if (putSpread.getOpenCost() != 0.0 &&
+	    					putSpread.getShortOptionOpen().getDelta() != 0 && putSpread.getLongOptionOpen().getDelta() != 0)
+	    				TradeService.recordShortPutSpread(putSpread);
+	    		}
 	    	} catch (Exception ex) {
 	    		ex.printStackTrace();
 	    		System.err.println("Problem with put chain");
