@@ -39,6 +39,11 @@ public class TradeDetailService {
 		return tradeDetails;
 	}
 
+	/**
+	 * Gets a list of trade legs in an open trade from the TradeDetail table. 
+	 * @param trade
+	 * @return
+	 */
 	public static List<TradeDetail> getTradeDetails(Trade trade) {
 
 		EntityManagerFactory emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");

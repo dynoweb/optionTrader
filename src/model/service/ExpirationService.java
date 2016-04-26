@@ -13,7 +13,12 @@ import javax.persistence.Query;
 import main.TradeProperties;
 import misc.Utils;
 
-
+/**
+ * This class is the Data Layer used for queries that are related to the option expiration date. 
+ * 
+ * @author rcromer
+ *
+ */
 public class ExpirationService {
 
 	/**
@@ -70,6 +75,37 @@ public class ExpirationService {
 				+ "order by opt.trade_date");
 		
 //		query.setParameter("tradeDate", tradeDate);
+		query.setParameter("expiration", expiration);
+//		query.setParameter("call_put", callPut);
+
+		List<Date> dates = query.getResultList();
+		em.close();
+		return dates;		
+	}
+	
+	/**
+	 * Returns a list of dates from trade open until expiration.
+	 * 
+	 * @param expiration
+	 * @return
+	 */
+	public static List<Date> getTradeDatesStarting(Date expiration, Date startDate) {
+		
+		EntityManagerFactory emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
+		EntityManager em = emf.createEntityManager();
+	
+		// Note: table name refers to the Entity Class and is case sensitive
+		//       field names are property names in the Entity Class
+		Query query = em.createQuery("select distinct(opt.trade_date) from " + TradeProperties.SYMBOL_FOR_QUERY + " opt "
+				+ "where "
+				+ "opt.trade_date >= :tradeDate " 
+				+ "opt.expiration=:expiration "	
+//				+ "and opt.call_put = :call_put "
+//				+ "and opt.delta > 0.04 "
+//				+ "and opt.delta < 0.96 "
+				+ "order by opt.trade_date");
+		
+		query.setParameter("tradeDate", startDate);
 		query.setParameter("expiration", expiration);
 //		query.setParameter("call_put", callPut);
 

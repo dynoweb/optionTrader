@@ -122,6 +122,10 @@ public class TradeDetail implements Serializable {
 		this.symbol = symbol;
 	}
 
+	/**
+	 * CALL OR PUT.
+	 * @return String of either "CALL" or "PUT".
+	 */
 	public String getType() {
 		return this.type;
 	}

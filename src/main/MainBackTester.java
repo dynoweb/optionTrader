@@ -41,6 +41,9 @@ public class MainBackTester {
 		case "SHORT_PUT_SPREAD":
 			bt.shortPutSpreadTest();
 			break;
+		case "SHORT_CALL":
+			bt.shortCallBackTest();
+			break;
 		default:
 			System.err.println("Unknown trade type: " + TradeProperties.TRADE_TYPE);
 			break;
@@ -50,9 +53,11 @@ public class MainBackTester {
 	
 	private void ironCondorBackTest() {
 	
-		double[] spreadWidths = { 1.0, 2.0, 3.0, 5.0, 10 };
-		//double[] deltas = {0.0228, 0.0668, 0.1, 0.1587, 0.2, 0.3}; 
-		double[] deltas = {0.0228, 0.0668, 0.1, 0.1587, 0.2, 0.3}; 
+		//double[] spreadWidths = { TradeProperties.SPREAD_WIDTH }; 
+		double[] spreadWidths = { 5 }; //, 10, 25, 50 };
+		//double[] spreadWidths = { 1.0, 2.0, 3.0, 5.0, 10 };
+		//double[] deltas = {TradeProperties.OPEN_DELTA};
+		double[] deltas = {0.0228}; //, 0.0668, 0.1, 0.1587, 0.2, 0.3, 0.35}; 
 		for (double delta : deltas) {
 		
 			for (double spreadWidth : spreadWidths) {
@@ -166,16 +171,16 @@ public class MainBackTester {
 
 	private void shortPutSpreadTest() {
 		
-		double[] spreadWidths = { 5, 10, 25, 50 };
+		double[] spreadWidths = { TradeProperties.SPREAD_WIDTH }; 
+		//double[] spreadWidths = { 5, 10, 25 };
 		//double[] spreadWidths = { 1.0, 2.0, 3.0, 5.0, 10 };
-		//double[] spreadWidths = { TradeProperties.SPREAD_WIDTH }; 
-		//double[] deltas = {0.0228, 0.0668, 0.1, 0.1587, 0.2, 0.3}; 
-		//double[] deltas = {0.0228, 0.0668, 0.1, 0.1587, 0.2, 0.3};
-		//double[] deltas = {0.1, 0.1587, 0.2, 0.31};
-		//double[] deltas = {0.25};
 		double[] deltas = {TradeProperties.OPEN_DELTA};
+		//double[] deltas = {0.0228, 0.0668, 0.1, 0.1587, 0.2, 0.3}; 
+		//double[] deltas = {0.0228, 0.0668};
+		//double[] deltas = {0.0228, 0.0668, 0.1, 0.1587, 0.2, 0.3};
+		//double[] deltas = {0.25};
 		int[] openDte = {TradeProperties.OPEN_DTE};
-		//int[] openDte = {30, 45, 60};
+		//int[] openDte = {7, 14, 28, 45};
 		
 		for (int dte :  openDte) {
 			
@@ -198,6 +203,50 @@ public class MainBackTester {
 					CloseTrade.closeTrades();
 					
 					Report.shortPutSpreadReport(delta, spreadWidth, dte);
+				}
+			}
+		}
+		
+		System.out.println("Finished!");
+	}
+
+	private void shortCallBackTest() {
+
+		double[] deltas = {TradeProperties.OPEN_DELTA};
+		//double[] deltas = {0.0228, 0.0668, 0.1, 0.1587, 0.2, 0.3}; 
+		//double[] deltas = {0.0228, 0.0668};
+		//double[] deltas = {0.0228, 0.0668, 0.1, 0.1587, 0.2, 0.3};
+		//double[] deltas = {0.25};
+		
+		int[] openDte = {TradeProperties.OPEN_DTE};
+		//int[] openDte = {7, 14, 28, 45};
+		
+		double[] profitTargets = {TradeProperties.PROFIT_TARGET};
+		//double[] profitTargets = {0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9}; 
+		//double[] profitTargets = {0.2, 0.4, 0.6, 0.8};
+		//double[] profitTargets = {0.1, 0.3, 0.5, 0.7, 0.9};
+		
+		for (int dte :  openDte) {
+			
+			for (double delta : deltas) {
+				
+				for (double profitTarget : profitTargets) {
+			
+					DbService.resetDataBase();
+					
+					Map<Date, Date> potentialTrades = Utils.getPotentialWeeklyTrades(dte);		
+					
+					for (Map.Entry<Date, Date> tradeDateSet : potentialTrades.entrySet()) {
+					    Date tradeDate = tradeDateSet.getKey();
+					    Date expiration = tradeDateSet.getValue();
+					    
+					    System.out.println("checking: tradeDate: "  + Utils.asMMMddYYYY(tradeDate) + " expiration: " + Utils.asMMMddYYYY(expiration));
+					    OpenTrade.findShortCall(tradeDate, expiration, delta);
+					}
+						
+					CloseTrade.closeTrades(profitTarget);
+					
+					Report.shortCallReport(delta, dte, profitTarget);
 				}
 			}
 		}
