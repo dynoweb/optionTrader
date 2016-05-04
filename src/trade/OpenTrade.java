@@ -438,6 +438,7 @@ public class OpenTrade {
 	    					putSpread.getShortOptionOpen().getDelta() != 0 && putSpread.getLongOptionOpen().getDelta() != 0) {
 	    				TradeService.recordShortPutSpread(putSpread);
 	    			}
+
 	    		}
 	    	} catch (Exception ex) {
 	    		ex.printStackTrace();
