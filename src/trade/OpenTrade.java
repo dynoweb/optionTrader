@@ -457,31 +457,59 @@ public class OpenTrade {
 	 * @param expiration
 	 * @param delta
 	 */
-	public static void findShortCall(Date tradeDate, Date expiration, double delta) {
+//	public static void findShortCall(Date tradeDate, Date expiration, double delta) {
+//
+//		String callPut = "C";
+//		OptionPricingService ops = new OptionPricingService();
+//		List<OptionPricing> callChain = ops.getOptionChain(tradeDate, expiration, callPut);
+//		
+//	    if (!callChain.isEmpty()) {
+//	    	try {
+//	    		OptionPricing shortCall = openShortCall(callChain, delta);
+//	    		
+//	    		   // validate contract   			// short option is priced                  // credit is created
+//	    		if (shortCall != null && shortCall.getBid() != 0 && shortCall.getAsk() != 0 && shortCall.getMean_price() > 0) {
+//	    			
+//	    			if (shortCall.getMean_price() != 0.0 && shortCall.getDelta() != 0 ) {
+//	    				
+//	    				// write the opening Trade and TradeDetails to the database
+//	    				TradeService.recordShortCall(shortCall);
+//	    			}
+//	    		}
+//	    	} catch (Exception ex) {
+//	    		ex.printStackTrace();
+//	    		System.err.println("Problem with call chain");
+//	    	}
+//	    } else {
+//	    	System.err.println("Call chain is empty for tradeDate: " + tradeDate + " and expiration: " + expiration);
+//	    }
+//	}
 
-		String callPut = "C";
+
+	public static void findShort(Date tradeDate, Date expiration, double delta, String callPut) {
+
 		OptionPricingService ops = new OptionPricingService();
-		List<OptionPricing> callChain = ops.getOptionChain(tradeDate, expiration, callPut);
+		List<OptionPricing> optChain = ops.getOptionChain(tradeDate, expiration, callPut);
 		
-	    if (!callChain.isEmpty()) {
+	    if (!optChain.isEmpty()) {
 	    	try {
-	    		OptionPricing shortCall = openShortCall(callChain, delta);
+	    		OptionPricing shortOpt = findOptionAtDelta(optChain, delta);
 	    		
 	    		   // validate contract   			// short option is priced                  // credit is created
-	    		if (shortCall != null && shortCall.getBid() != 0 && shortCall.getAsk() != 0 && shortCall.getMean_price() > 0) {
+	    		if (shortOpt != null && shortOpt.getBid() != 0 && shortOpt.getAsk() != 0 && shortOpt.getMean_price() > 0) {
 	    			
-	    			if (shortCall.getMean_price() != 0.0 && shortCall.getDelta() != 0 ) {
+	    			if (shortOpt.getMean_price() != 0.0 && shortOpt.getDelta() != 0 ) {
 	    				
 	    				// write the opening Trade and TradeDetails to the database
-	    				TradeService.recordShortCall(shortCall);
+	    				TradeService.recordShort(shortOpt);
 	    			}
 	    		}
 	    	} catch (Exception ex) {
 	    		ex.printStackTrace();
-	    		System.err.println("Problem with call chain");
+	    		System.err.println("Problem with option chain");
 	    	}
 	    } else {
-	    	System.err.println("Call chain is empty for tradeDate: " + tradeDate + " and expiration: " + expiration);
+	    	System.err.println("Option chain is empty for tradeDate: " + tradeDate + " and expiration: " + expiration);
 	    }
 	}
 

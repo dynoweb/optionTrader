@@ -2,7 +2,7 @@ package main;
 
 public class TradeProperties {
 
-	public static final String TRADE_TYPE="SHORT_CALL";  // ["COVERED_CALL", "COVERED_STRADDLE", "IRON_CONDOR", "SHORT_PUT_SPREAD", "SHORT_CALL"]
+	public static final String TRADE_TYPE="SHORT_PUT_SPREAD";  // ["COVERED_CALL", "COVERED_STRADDLE", "IRON_CONDOR", "SHORT_PUT_SPREAD", "SHORT_CALL", "SHORT_PUT"]
 	
 //	public static final String SYMBOL = "EEM";
 //	public static final String SYMBOL = "IWM";
@@ -22,8 +22,8 @@ public class TradeProperties {
 	// Delta = 0.0228 - 2 SD
 	//
 	// Open trade properties
-	public static double OPEN_DELTA = 0.1;
-	public static int OPEN_DTE = 14;
+	public static double OPEN_DELTA = 0.3;
+	public static int OPEN_DTE = 7;
 	public static double SPREAD_WIDTH = 5.0;
 	
 	// Close trade properties

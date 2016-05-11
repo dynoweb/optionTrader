@@ -38,6 +38,9 @@ public class CloseTrade {
 			if (trade.getTradeType().equals("SHORT CALL")) {
 				closeShortCall(trade, profitTarget);
 			}
+			if (trade.getTradeType().equals("SHORT PUT")) {
+				closeShort(trade, profitTarget);
+			}
 		}
 		
 		em.getTransaction().commit();
@@ -210,6 +213,147 @@ public class CloseTrade {
 				closeShortCallTradeDetail.setType(call.getCall_put().equals("C") ? "CALL" : "PUT");
 				
 				em.persist(closeShortCallTradeDetail);					
+			}
+		}
+	}
+	
+	private static void closeShort(Trade trade, double profitTarget) {
+
+		TradeDetail openingShortLeg = null;
+		
+		// Get the legs of the trade
+		List<TradeDetail> openTradeDetails = TradeDetailService.getTradeDetails(trade);
+		for (TradeDetail tradeDetail : openTradeDetails) {
+			//if (tradeDetail.getType().equals("CALL"))
+				openingShortLeg = tradeDetail;
+		}
+		
+		// from JDK to Joda
+		DateTime jOpenDate = new DateTime(openingShortLeg.getExecTime());
+		DateTime jExpDate = new DateTime(trade.getExp()); 
+		DateTime jCloseByDate = new DateTime(trade.getExp());
+		jCloseByDate = jCloseByDate.plusDays(- TradeProperties.CLOSE_DTE);
+		
+		List<OptionPricing> optPriceList = OptionPricingService
+				.getPriceHistory(jOpenDate.plusDays(1).toDate(), jCloseByDate.toDate(), jExpDate.toDate(), 
+						openingShortLeg.getStrike(), openingShortLeg.getType().substring(0, 1));
+
+		for (OptionPricing shortOpt: optPriceList) {
+		
+			// look for profit target exit
+			if (profitTarget != 0.0) {  
+
+				// short option closing close
+				double shortClosingCost = (Utils.round(- shortOpt.getMean_price() * 100, 2));
+				// since all legs (trade) closing cost
+				double closingCost = shortClosingCost;
+				
+				if (Math.abs(closingCost) < trade.getOpeningCost() * (1 - profitTarget)) {
+					
+					System.out.println("Profit Target Closing Cost: " + closingCost);  
+					trade.setClosingCost(closingCost);
+					trade.setProfit(Utils.round(trade.getClosingCost() + trade.getOpeningCost(), 2));
+					trade.setClose_status((profitTarget * 100) + "% PROFIT TARGET");
+					trade.setCloseDate(shortOpt.getTrade_date());
+					
+					em.merge(trade);									
+					
+					// Save the closing price of the short call in the trade details table
+					TradeDetail closeShortTradeDetail = new TradeDetail();
+					
+					closeShortTradeDetail.setExecTime(shortOpt.getTrade_date());
+					closeShortTradeDetail.setExp(shortOpt.getExpiration());
+					closeShortTradeDetail.setPosEffect("CLOSING");
+					closeShortTradeDetail.setPrice(Utils.round(-shortOpt.getMean_price(), 2));
+					closeShortTradeDetail.setQty(TradeProperties.CONTRACTS);
+					closeShortTradeDetail.setSide("BUY");
+					closeShortTradeDetail.setStrike(shortOpt.getStrike());
+					closeShortTradeDetail.setSymbol(shortOpt.getSymbol());
+					closeShortTradeDetail.setTrade(trade);
+					closeShortTradeDetail.setType(shortOpt.getCall_put().equals("C") ? "CALL" : "PUT");
+					
+					em.persist(closeShortTradeDetail);				
+					
+					break;
+				}
+			}
+			
+			// MAX_LOSS of 2.0 is 200% of credit
+			if (TradeProperties.MAX_LOSS != 0.0) {
+
+				// short option closing close
+				double closingCost = (Utils.round(- shortOpt.getMean_price() * 100, 2));
+
+				if (Math.abs(closingCost) > trade.getOpeningCost() * (1 + TradeProperties.MAX_LOSS)) {
+					
+					System.out.println("Closing - Stop Loss - on " + Utils.asMMddYY(shortOpt.getTrade_date()) + " "  + closingCost);
+					
+					trade.setClosingCost(closingCost);
+					trade.setProfit(Utils.round(trade.getClosingCost() + trade.getOpeningCost(),2));
+					trade.setClose_status((TradeProperties.MAX_LOSS * 100) +  "% MAX LOSS");
+					trade.setCloseDate(shortOpt.getTrade_date());
+					
+					em.merge(trade);
+					
+					// Save the closing price of the short call in the trade details table
+					TradeDetail closeShortTradeDetail = new TradeDetail();
+					
+					closeShortTradeDetail.setExecTime(shortOpt.getTrade_date());
+					closeShortTradeDetail.setExp(shortOpt.getExpiration());
+					closeShortTradeDetail.setPosEffect("CLOSING");
+					closeShortTradeDetail.setPrice(Utils.round(-shortOpt.getMean_price(), 2));
+					closeShortTradeDetail.setQty(TradeProperties.CONTRACTS);
+					closeShortTradeDetail.setSide("BUY");
+					closeShortTradeDetail.setStrike(shortOpt.getStrike());
+					closeShortTradeDetail.setSymbol(shortOpt.getSymbol());
+					closeShortTradeDetail.setTrade(trade);
+					closeShortTradeDetail.setType(shortOpt.getCall_put().equals("C") ? "CALL" : "PUT");
+					
+					em.persist(closeShortTradeDetail);				
+					
+					break;					
+				}
+			}
+
+			
+			// Current trade date under consideration
+			DateTime jTradeDate = new DateTime(shortOpt.getTrade_date());
+			// Last trade in the trading days list
+			DateTime jLastTradeDate = new DateTime(optPriceList.get(optPriceList.size()-1).getTrade_date());
+			
+			if (jTradeDate.equals(jLastTradeDate)) {
+				
+				// perform a time close
+				trade.setClosingCost(Utils.round(- shortOpt.getMean_price() * 100, 2));
+				System.out.println("Time Closing Cost: " + trade.getClosingCost());
+				
+				trade.setProfit(Utils.round(trade.getClosingCost() + trade.getOpeningCost(),2));
+				trade.setClose_status(TradeProperties.CLOSE_DTE + " DTE TIME CLOSE");
+				trade.setCloseDate(shortOpt.getTrade_date());
+				
+				em.merge(trade);
+				
+				// Save the closing price of the short call in the trade details table
+				TradeDetail closeShortTradeDetail = new TradeDetail();
+				
+				String comment = null;
+				if (trade.getClosingCost() > 0) {
+					comment = "Stock close price: " + shortOpt.getAdjusted_stock_close_price() + " delta: " + shortOpt.getDelta();
+				}
+				
+				closeShortTradeDetail.setComment(comment);
+				closeShortTradeDetail.setExecTime(shortOpt.getTrade_date());
+				closeShortTradeDetail.setExp(shortOpt.getExpiration());
+				closeShortTradeDetail.setPosEffect("CLOSING");
+				closeShortTradeDetail.setPrice(Utils.round(-shortOpt.getMean_price(), 2));
+				closeShortTradeDetail.setQty(TradeProperties.CONTRACTS);
+				closeShortTradeDetail.setSide("BUY");
+				closeShortTradeDetail.setStrike(shortOpt.getStrike());
+				closeShortTradeDetail.setSymbol(shortOpt.getSymbol());
+				closeShortTradeDetail.setTrade(trade);
+				closeShortTradeDetail.setType(shortOpt.getCall_put().equals("C") ? "CALL" : "PUT");
+				
+				em.persist(closeShortTradeDetail);					
 			}
 		}
 	}

@@ -207,11 +207,6 @@ public class Report {
 		}
 	}
 
-	public static void buildCoveredStraddleReport(int dte) {
-		// TODO Auto-generated method stub
-		
-	}
-
 	public static void shortPutSpreadReport(double delta, double spreadWidth, int dte) {
 		
 		List<String> lines = new ArrayList<String>();
@@ -220,11 +215,13 @@ public class Report {
 
 		double netProfit = 0.0;
 		double grossRisk = 0.0;
+		double grossCredit = 0.0;
 		double maxProfit = Double.MIN_VALUE;;
 		double maxDD = 0.0;
 		double drawDown = 0.0;
 		int numberOfTrades = 0;
 		int profitableTrades = 0;
+		int daysInTrade = 0;
 
 		lines.add("<H3>"+ TradeProperties.SYMBOL + "</H3>");
 		lines.add("<H3>" + " Short Delta: " + delta + " Days To Expiration: " + dte + " Short Put Spreads, width: " + spreadWidth + "</H3>");
@@ -242,8 +239,14 @@ public class Report {
 			maxProfit = Math.max(maxProfit, netProfit);
 			drawDown = netProfit-maxProfit;
 			maxDD = Math.min(maxDD, drawDown);
+			grossCredit += trade.getOpeningCost();
 			profitableTrades = trade.getProfit() > 0 ? profitableTrades + 1 : profitableTrades; 
 			grossRisk += (spreadWidth * 100 - trade.getOpeningCost());
+			
+			DateTime jOpenDate = new DateTime(trade.getExecTime());
+			DateTime jCloseDate = new DateTime(trade.getCloseDate());
+			Days days = Days.daysBetween(jOpenDate, jCloseDate);
+			daysInTrade += days.getDays();
 			
 			lines.add("  <TR>"
 					+ "<TD>"+Utils.asMMddYY(trade.getExecTime())+"</TD><TD>"+Utils.asMMddYY(trade.getCloseDate())+"</TD>"
@@ -257,11 +260,17 @@ public class Report {
 		lines.add("<br/><h3>Trades: " + numberOfTrades + "</h3>");
 		if (numberOfTrades > 0) {
 			lines.add("<h3>Avg Profit Per Trade: $" + Utils.round(netProfit/numberOfTrades,2) + "</h3>");
+			double avgCreditPerTrade = Utils.round(grossCredit/numberOfTrades, 2);
+			lines.add("<h3>Avg Credit Per Trade: $" + avgCreditPerTrade + "</h3>");
+			double profitPerDay = Utils.round(netProfit/daysInTrade, 2);
 			double avgReturnPerTrade = Utils.round(100 * netProfit/grossRisk, 2);
 			lines.add("<h3>Avg Return Per Trade: " + avgReturnPerTrade + "%</h3>");
+			lines.add("<h3>Profit Per Day: $" + profitPerDay + "</h3>");
+			lines.add("<h3>Average Days In Trade: " + Utils.round(daysInTrade/numberOfTrades, 1) + "</h3>");
 			lines.add("<h3>Profitable Trades: " + Utils.round(100 * profitableTrades/numberOfTrades, 2) + "%</h3>");
 			lines.add("<h3>        Max Drawdown: $" + Utils.round(maxDD, 2) + "</h3>");
 		}
+
 		lines.add("<h3>Net Profit: $" + Utils.round(netProfit,2) + "</h3></CENTER>");
 		lines.add("</BODY></HTML>");
 		
@@ -279,7 +288,7 @@ public class Report {
 		}
 	}
 
-	public static void shortCallReport(double delta, int dte, double profitTarget) {
+	public static void shortOptionReport(double delta, int dte, double profitTarget) {
 
 		List<String> lines = new ArrayList<String>();
 
@@ -295,7 +304,8 @@ public class Report {
 		int profitableTrades = 0;
 		int daysInTrade = 0;
 
-		lines.add("<H3>Short Call - "+ TradeProperties.SYMBOL + "</H3>");
+		String tradeType = TradeProperties.TRADE_TYPE.equals("SHORT_CALL") ? "Short Call" : "Short Put";
+		lines.add("<H3>" + tradeType + " - "+ TradeProperties.SYMBOL + "</H3>");
 		lines.add("<H3>" + " Short Delta: " + delta + " Days To Expiration: " + dte + "</H3>");
 		lines.add("<H3>Profit Target: " + (profitTarget * 100) + "%, Max Loss: " + (TradeProperties.MAX_LOSS * 100) + "%, Close at: " + TradeProperties.CLOSE_DTE + " DTE</H3>");		
 		lines.add("</CENTER>");
@@ -345,7 +355,8 @@ public class Report {
 		lines.add("<h3>Net Profit: $" + Utils.round(netProfit,2) + "</h3></CENTER>");
 		lines.add("</BODY></HTML>");
 		
-		String outFileName = reportFolder + "SC_" + TradeProperties.SYMBOL 
+		String fileNamePrefix = TradeProperties.TRADE_TYPE.equals("SHORT_CALL") ? "SC_" : "SP_";
+		String outFileName = reportFolder + fileNamePrefix + TradeProperties.SYMBOL 
 				+ "_D_" + delta 
 				+ "_DTE_" + dte 
 				//+ "_SW" + spreadWidth
@@ -358,4 +369,10 @@ public class Report {
 			e.printStackTrace();
 		}
 	}
+
+	public static void buildCoveredStraddleReport(int dte) {
+		// TODO Auto-generated method stub
+		
+	}
+
 }

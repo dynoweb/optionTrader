@@ -347,4 +347,42 @@ public class TradeService {
 		emf.close();
 
 	}
+
+	public static void recordShort(OptionPricing shortOption) {
+		
+		Trade trade = new Trade();
+		int contracts = TradeProperties.CONTRACTS;
+		
+		TradeDetail shortTrade = null;
+		
+		//OptionPricing shortCall = null;
+    	try {
+    		shortTrade = initializeTradeDetail(shortOption, -TradeProperties.CONTRACTS, "OPENING", "SELL");
+    	} catch (Exception ex) {
+    		ex.printStackTrace();
+    		throw ex;
+    	}
+		
+		trade.setExecTime(shortTrade.getExecTime());
+		trade.setExp(shortTrade.getExp());
+		trade.setTradeType("SHORT " + (shortOption.getCall_put().equals("C") ? "CALL" : "PUT"));
+		trade.setClose_status("OPEN");
+		
+		double openingCost = Utils.round(shortTrade.getPrice() * 100, 2);
+		trade.setOpeningCost(openingCost);
+
+		EntityManagerFactory emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
+		EntityManager em = emf.createEntityManager();
+		
+		em.getTransaction().begin();		
+		em.persist(trade);
+		
+		shortTrade.setTrade(trade);
+		em.persist(shortTrade);
+		
+		em.getTransaction().commit();
+		em.close();
+		emf.close();
+
+	}
 }
