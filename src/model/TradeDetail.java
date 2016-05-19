@@ -38,6 +38,7 @@ public class TradeDetail implements Serializable {
 
 	private String symbol;
 
+	// "CALL" or "PUT"
 	private String type;
 	
 	private String comment;

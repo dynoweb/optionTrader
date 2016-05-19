@@ -15,7 +15,7 @@ import misc.Utils;
 import model.OptionPricing;
 import model.Trade;
 import model.TradeDetail;
-import model.service.ExpirationService;
+//import model.service.ExpirationService;
 import model.service.OptionPricingService;
 import model.service.TradeDetailService;
 import model.service.TradeService;
@@ -36,7 +36,8 @@ public class CloseTrade {
 		for (Trade trade : trades) {
 		
 			if (trade.getTradeType().equals("SHORT CALL")) {
-				closeShortCall(trade, profitTarget);
+				//closeShortCall(trade, profitTarget);
+				closeShort(trade, profitTarget);
 			}
 			if (trade.getTradeType().equals("SHORT PUT")) {
 				closeShort(trade, profitTarget);
@@ -54,7 +55,7 @@ public class CloseTrade {
 	 *  2 - Hit Stop Loss
 	 *  3 - Hit Exit at DTE Limit
 	 */
-	public static void closeTrades() {
+	public static void closeTrades(String tradeType, double spreadWidth) {
 		
 		emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
 		em = emf.createEntityManager();
@@ -70,7 +71,7 @@ public class CloseTrade {
 		
 		// Check for time exit, TradeProperties.CLOSE_DTE;
 		em.getTransaction().begin();		
-		closeTimeExit();
+		closeTimeExit(spreadWidth);
 		em.getTransaction().commit();
 		
 		em.close();
@@ -114,108 +115,108 @@ public class CloseTrade {
 	 * @param trade
 	 * @param profitTarget 
 	 */
-	private static void closeShortCall(Trade trade, double profitTarget) {
-
-		TradeDetail openingShortCallLeg = null;
-		
-		// Get the legs of the trade
-		List<TradeDetail> openTradeDetails = TradeDetailService.getTradeDetails(trade);
-		for (TradeDetail tradeDetail : openTradeDetails) {
-			if (tradeDetail.getType().equals("CALL"))
-				openingShortCallLeg = tradeDetail;
-		}
-		
-		// from JDK to Joda
-		DateTime jOpenDate = new DateTime(openingShortCallLeg.getExecTime());
-		DateTime jExpDate = new DateTime(trade.getExp()); 
-		DateTime jCloseByDate = new DateTime(trade.getExp());
-		jCloseByDate = jCloseByDate.plusDays(- TradeProperties.CLOSE_DTE);
-		
-		List<OptionPricing> callPriceList = OptionPricingService
-				.getPriceHistory(jOpenDate.plusDays(1).toDate(), jCloseByDate.toDate(), jExpDate.toDate(), 
-						openingShortCallLeg.getStrike(), "C");
-
-		for (OptionPricing call: callPriceList) {
-		
-			// look for profit target exit
-			if (profitTarget != 0.0) {  
-
-				// short call closing close
-				double shortCallClosingCost = (Utils.round(- call.getMean_price() * 100, 2));
-				// since all legs (trade) closing cost
-				double closingCost = shortCallClosingCost;
-				
-				if (Math.abs(closingCost) < trade.getOpeningCost() * (1 - profitTarget)) {
-					
-					System.out.println("Profit Target Closing Cost: " + closingCost);  
-					trade.setClosingCost(closingCost);
-					trade.setProfit(Utils.round(trade.getClosingCost() + trade.getOpeningCost(), 2));
-					trade.setClose_status((profitTarget * 100) + "% PROFIT TARGET");
-					trade.setCloseDate(call.getTrade_date());
-					
-					em.merge(trade);									
-					
-					// Save the closing price of the short call in the trade details table
-					TradeDetail closeShortCallTradeDetail = new TradeDetail();
-					
-					closeShortCallTradeDetail.setExecTime(call.getTrade_date());
-					closeShortCallTradeDetail.setExp(call.getExpiration());
-					closeShortCallTradeDetail.setPosEffect("CLOSING");
-					closeShortCallTradeDetail.setPrice(Utils.round(-call.getMean_price(), 2));
-					closeShortCallTradeDetail.setQty(TradeProperties.CONTRACTS);
-					closeShortCallTradeDetail.setSide("BUY");
-					closeShortCallTradeDetail.setStrike(call.getStrike());
-					closeShortCallTradeDetail.setSymbol(call.getSymbol());
-					closeShortCallTradeDetail.setTrade(trade);
-					closeShortCallTradeDetail.setType(call.getCall_put().equals("C") ? "CALL" : "PUT");
-					
-					em.persist(closeShortCallTradeDetail);				
-					
-					break;
-				}
-			}
-			
-			// Current trade date under consideration
-			DateTime jTradeDate = new DateTime(call.getTrade_date());
-			// Last trade in the trading days list
-			DateTime jLastTradeDate = new DateTime(callPriceList.get(callPriceList.size()-1).getTrade_date());
-			
-			if (jTradeDate.equals(jLastTradeDate)) {
-				
-				// perform a time close
-				trade.setClosingCost(Utils.round(- call.getMean_price() * 100, 2));
-				System.out.println("Time Closing Cost: " + trade.getClosingCost());
-				
-				trade.setProfit(Utils.round(trade.getClosingCost() + trade.getOpeningCost(),2));
-				trade.setClose_status(TradeProperties.CLOSE_DTE + " DTE TIME CLOSE");
-				trade.setCloseDate(call.getTrade_date());
-				
-				em.merge(trade);
-				
-				// Save the closing price of the short call in the trade details table
-				TradeDetail closeShortCallTradeDetail = new TradeDetail();
-				
-				String comment = null;
-				if (trade.getClosingCost() > 0) {
-					comment = "Stock close price: " + call.getAdjusted_stock_close_price() + " delta: " + call.getDelta();
-				}
-				
-				closeShortCallTradeDetail.setComment(comment);
-				closeShortCallTradeDetail.setExecTime(call.getTrade_date());
-				closeShortCallTradeDetail.setExp(call.getExpiration());
-				closeShortCallTradeDetail.setPosEffect("CLOSING");
-				closeShortCallTradeDetail.setPrice(Utils.round(-call.getMean_price(), 2));
-				closeShortCallTradeDetail.setQty(TradeProperties.CONTRACTS);
-				closeShortCallTradeDetail.setSide("BUY");
-				closeShortCallTradeDetail.setStrike(call.getStrike());
-				closeShortCallTradeDetail.setSymbol(call.getSymbol());
-				closeShortCallTradeDetail.setTrade(trade);
-				closeShortCallTradeDetail.setType(call.getCall_put().equals("C") ? "CALL" : "PUT");
-				
-				em.persist(closeShortCallTradeDetail);					
-			}
-		}
-	}
+//	private static void closeShortCall(Trade trade, double profitTarget) {
+//
+//		TradeDetail openingShortCallLeg = null;
+//		
+//		// Get the legs of the trade
+//		List<TradeDetail> openTradeDetails = TradeDetailService.getTradeDetails(trade);
+//		for (TradeDetail tradeDetail : openTradeDetails) {
+//			if (tradeDetail.getType().equals("CALL"))
+//				openingShortCallLeg = tradeDetail;
+//		}
+//		
+//		// from JDK to Joda
+//		DateTime jOpenDate = new DateTime(openingShortCallLeg.getExecTime());
+//		DateTime jExpDate = new DateTime(trade.getExp()); 
+//		DateTime jCloseByDate = new DateTime(trade.getExp());
+//		jCloseByDate = jCloseByDate.plusDays(- TradeProperties.CLOSE_DTE);
+//		
+//		List<OptionPricing> callPriceList = OptionPricingService
+//				.getPriceHistory(jOpenDate.plusDays(1).toDate(), jCloseByDate.toDate(), jExpDate.toDate(), 
+//						openingShortCallLeg.getStrike(), "C");
+//
+//		for (OptionPricing call: callPriceList) {
+//		
+//			// look for profit target exit
+//			if (profitTarget != 0.0) {  
+//
+//				// short call closing close
+//				double shortCallClosingCost = (Utils.round(- call.getMean_price() * 100, 2));
+//				// since all legs (trade) closing cost
+//				double closingCost = shortCallClosingCost;
+//				
+//				if (Math.abs(closingCost) < trade.getOpeningCost() * (1 - profitTarget)) {
+//					
+//					System.out.println("Profit Target Closing Cost: " + closingCost);  
+//					trade.setClosingCost(closingCost);
+//					trade.setProfit(Utils.round(trade.getClosingCost() + trade.getOpeningCost(), 2));
+//					trade.setClose_status((profitTarget * 100) + "% PROFIT TARGET");
+//					trade.setCloseDate(call.getTrade_date());
+//					
+//					em.merge(trade);									
+//					
+//					// Save the closing price of the short call in the trade details table
+//					TradeDetail closeShortCallTradeDetail = new TradeDetail();
+//					
+//					closeShortCallTradeDetail.setExecTime(call.getTrade_date());
+//					closeShortCallTradeDetail.setExp(call.getExpiration());
+//					closeShortCallTradeDetail.setPosEffect("CLOSING");
+//					closeShortCallTradeDetail.setPrice(Utils.round(-call.getMean_price(), 2));
+//					closeShortCallTradeDetail.setQty(TradeProperties.CONTRACTS);
+//					closeShortCallTradeDetail.setSide("BUY");
+//					closeShortCallTradeDetail.setStrike(call.getStrike());
+//					closeShortCallTradeDetail.setSymbol(call.getSymbol());
+//					closeShortCallTradeDetail.setTrade(trade);
+//					closeShortCallTradeDetail.setType(call.getCall_put().equals("C") ? "CALL" : "PUT");
+//					
+//					em.persist(closeShortCallTradeDetail);				
+//					
+//					break;
+//				}
+//			}
+//			
+//			// Current trade date under consideration
+//			DateTime jTradeDate = new DateTime(call.getTrade_date());
+//			// Last trade in the trading days list
+//			DateTime jLastTradeDate = new DateTime(callPriceList.get(callPriceList.size()-1).getTrade_date());
+//			
+//			if (jTradeDate.equals(jLastTradeDate)) {
+//				
+//				// perform a time close
+//				trade.setClosingCost(Utils.round(- call.getMean_price() * 100, 2));
+//				System.out.println("Time Closing Cost: " + trade.getClosingCost());
+//				
+//				trade.setProfit(Utils.round(trade.getClosingCost() + trade.getOpeningCost(),2));
+//				trade.setClose_status(TradeProperties.CLOSE_DTE + " DTE TIME CLOSE");
+//				trade.setCloseDate(call.getTrade_date());
+//				
+//				em.merge(trade);
+//				
+//				// Save the closing price of the short call in the trade details table
+//				TradeDetail closeShortCallTradeDetail = new TradeDetail();
+//				
+//				String comment = null;
+//				if (trade.getClosingCost() > 0) {
+//					comment = "Stock close price: " + call.getAdjusted_stock_close_price() + " delta: " + call.getDelta();
+//				}
+//				
+//				closeShortCallTradeDetail.setComment(comment);
+//				closeShortCallTradeDetail.setExecTime(call.getTrade_date());
+//				closeShortCallTradeDetail.setExp(call.getExpiration());
+//				closeShortCallTradeDetail.setPosEffect("CLOSING");
+//				closeShortCallTradeDetail.setPrice(Utils.round(-call.getMean_price(), 2));
+//				closeShortCallTradeDetail.setQty(TradeProperties.CONTRACTS);
+//				closeShortCallTradeDetail.setSide("BUY");
+//				closeShortCallTradeDetail.setStrike(call.getStrike());
+//				closeShortCallTradeDetail.setSymbol(call.getSymbol());
+//				closeShortCallTradeDetail.setTrade(trade);
+//				closeShortCallTradeDetail.setType(call.getCall_put().equals("C") ? "CALL" : "PUT");
+//				
+//				em.persist(closeShortCallTradeDetail);					
+//			}
+//		}
+//	}
 	
 	private static void closeShort(Trade trade, double profitTarget) {
 
@@ -233,6 +234,10 @@ public class CloseTrade {
 		DateTime jExpDate = new DateTime(trade.getExp()); 
 		DateTime jCloseByDate = new DateTime(trade.getExp());
 		jCloseByDate = jCloseByDate.plusDays(- TradeProperties.CLOSE_DTE);
+		
+//		if (jExpDate.getYear() == 2011) {
+//			System.out.println("Setting breakpoint");
+//		}
 		
 		List<OptionPricing> optPriceList = OptionPricingService
 				.getPriceHistory(jOpenDate.plusDays(1).toDate(), jCloseByDate.toDate(), jExpDate.toDate(), 
@@ -548,7 +553,7 @@ public class CloseTrade {
 		
 		Calendar cal = Calendar.getInstance();
 		Date lastTradeDate = OptionPricingService.getLastTradeDate();
-		//List<TradeDetail> openTradeDetails = trade.getTradeDetails();
+
 		List<TradeDetail> openTradeDetails = TradeDetailService.getTradeDetails(trade);
 		
 		for (int days = 1; days < maxDte - TradeProperties.CLOSE_DTE; days++) {				
@@ -649,11 +654,32 @@ public class CloseTrade {
 	/**
 	 * Iterates through the list of open trades, 
 	 */
-	private static void closeTimeExit() {
+	private static void closeTimeExit(double spreadWidth) {
 		
-		if (TradeProperties.TRADE_TYPE.equals("SHORT_CALL")) {
+		if (TradeProperties.TRADE_TYPE.equals("SHORT_CALL") || TradeProperties.TRADE_TYPE.equals("SHORT_PUT")) {
 			return;
 		}
+		
+		//--------------------------------------------
+		// TODO May Want To Put This Type Of Logic Here
+//		TradeDetail openingShortLeg = null;
+//		
+//		// Get the legs of the trade
+//		List<TradeDetail> openTradeDetails = TradeDetailService.getTradeDetails(trade);
+//		for (TradeDetail tradeDetail : openTradeDetails) {
+//			//if (tradeDetail.getType().equals("CALL"))
+//				openingShortLeg = tradeDetail;
+//		}
+//		
+//		DateTime jOpenDate = new DateTime(openingShortLeg.getExecTime());
+//		DateTime jExpDate = new DateTime(trade.getExp()); 
+//		DateTime jCloseByDate = new DateTime(trade.getExp());
+//		jCloseByDate = jCloseByDate.plusDays(- TradeProperties.CLOSE_DTE);
+//		
+//		List<OptionPricing> optPriceList = OptionPricingService
+//				.getPriceHistory(jOpenDate.plusDays(1).toDate(), jCloseByDate.toDate(), jExpDate.toDate(), 
+//						openingShortLeg.getStrike(), openingShortLeg.getType().substring(0, 1));
+		//--------------------------------------------
 		
 		OptionPricing longCall = null;
 		OptionPricing shortCall = null;
@@ -661,8 +687,8 @@ public class CloseTrade {
 		OptionPricing shortPut = null;
 		TradeDetail longStock = null; 
 		
-		Calendar cal = Calendar.getInstance();
-		Date lastTradeDate = OptionPricingService.getLastTradeDate();
+		Calendar lastOptionTradedCal = Calendar.getInstance();
+		//Date lastTradeDate = OptionPricingService.getLastTradeDate();
 		
 		// Gets all open trades
 		List<Trade> trades = TradeService.getOpenTrades();
@@ -670,21 +696,25 @@ public class CloseTrade {
 		
 		for (Trade trade : trades) {
 		
-			cal.clear();
-			cal.setTime(trade.getExp());
+			Date lastContractTradeDate = OptionPricingService.getLastTradeDateForOption(trade.getExp());
+			lastOptionTradedCal.clear();
+			lastOptionTradedCal.setTime(lastContractTradeDate);
 
 			// Gets the trade details based on the expiration date
 			//List<TradeDetail> openTradeDetails = trade.getTradeDetails();
 			List<TradeDetail> openTradeDetails = TradeDetailService.getTradeDetails(trade);
 			
-			// set calendar to date to close trade
-			cal.add(Calendar.DATE, - TradeProperties.CLOSE_DTE);
+
 			
-			ExpirationService es = new ExpirationService();
-			List<Date> dates = es.getTradeDatesForExpiration(trade.getExp());
-			while (!dates.contains(cal.getTime())) {
-				cal.add(Calendar.DAY_OF_MONTH, -1);
-			}
+// Assuming all trades close at last trade date			
+//			// set calendar to date to close trade
+//			cal.add(Calendar.DATE, - TradeProperties.CLOSE_DTE);
+//			
+//			ExpirationService es = new ExpirationService();
+//			List<Date> dates = es.getTradeDatesForExpiration(trade.getExp());
+//			while (!dates.contains(cal.getTime())) {
+//				cal.add(Calendar.DAY_OF_MONTH, -1);
+//			}
 			
 //			while (Utils.isHoliday(cal) || cal.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY) {
 //				cal.add(Calendar.DAY_OF_MONTH, -1);
@@ -693,34 +723,34 @@ public class CloseTrade {
 			double strike = 0.0;
 
 			// if the normal close time is after the price records, close the trade on the last record date.
-			if (cal.getTime().after(lastTradeDate)) {
-				cal.setTime(lastTradeDate);
-			}			
+//			if (cal.getTime().after(lastTradeDate)) {
+//				cal.setTime(lastTradeDate);
+//			}			
 
 			try {
 				for (TradeDetail openTradeDetail : openTradeDetails) {
 					strike = openTradeDetail.getStrike();
 					
-					System.out.println("Checking time close on " + Utils.asMMddYY(cal.getTime()) + " Expires on " + Utils.asMMddYY(cal.getTime()) + " strike: " + strike + " type: " + openTradeDetail.getType());
+					System.out.println("Checking time close on " + Utils.asMMddYY(lastOptionTradedCal.getTime()) + " Expires on " + Utils.asMMddYY(lastOptionTradedCal.getTime()) + " strike: " + strike + " type: " + openTradeDetail.getType());
 
 					if (openTradeDetail.getSide().equals("BUY") && openTradeDetail.getType().equals("CALL")) {
-						longCall = OptionPricingService.getRecord(cal.getTime(), trade.getExp(), openTradeDetail.getStrike(), "C");
+						longCall = OptionPricingService.getRecord(lastOptionTradedCal.getTime(), trade.getExp(), openTradeDetail.getStrike(), "C");
 					}
 					if (openTradeDetail.getSide().equals("SELL") && openTradeDetail.getType().equals("CALL")) {
-						shortCall = OptionPricingService.getRecord(cal.getTime(), trade.getExp(), openTradeDetail.getStrike(), "C");
+						shortCall = OptionPricingService.getRecord(lastOptionTradedCal.getTime(), trade.getExp(), openTradeDetail.getStrike(), "C");
 					}
 					if (openTradeDetail.getSide().equals("BUY") && openTradeDetail.getType().equals("PUT")) {
-						longPut = OptionPricingService.getRecord(cal.getTime(), trade.getExp(), openTradeDetail.getStrike(), "P");
+						longPut = OptionPricingService.getRecord(lastOptionTradedCal.getTime(), trade.getExp(), openTradeDetail.getStrike(), "P");
 					}
 					if (openTradeDetail.getSide().equals("SELL") && openTradeDetail.getType().equals("PUT")) {
-						shortPut = OptionPricingService.getRecord(cal.getTime(), trade.getExp(), openTradeDetail.getStrike(), "P");
+						shortPut = OptionPricingService.getRecord(lastOptionTradedCal.getTime(), trade.getExp(), openTradeDetail.getStrike(), "P");
 					}
 					if (openTradeDetail.getType().equals("STOCK")) {
 						longStock = openTradeDetail; 
 					}
 				}
 			} catch (Exception e) {
-				System.out.println("Exception - Checking time close on " + Utils.asMMddYY(cal.getTime()) + " Expires on " + Utils.asMMddYY(cal.getTime()) + " strike: " + strike);
+				System.out.println("Exception - Checking time close on " + Utils.asMMddYY(lastOptionTradedCal.getTime()) + " Expires on " + Utils.asMMddYY(lastOptionTradedCal.getTime()) + " strike: " + strike);
 				e.printStackTrace();
 				//throw e;
 			}
@@ -733,7 +763,7 @@ public class CloseTrade {
 				
 				trade.setProfit(Utils.round(trade.getClosingCost() + trade.getOpeningCost(),2));
 				trade.setClose_status(TradeProperties.CLOSE_DTE + " DTE TIME CLOSE");
-				trade.setCloseDate(cal.getTime());
+				trade.setCloseDate(lastOptionTradedCal.getTime());
 				
 				em.merge(trade);
 				
@@ -757,15 +787,18 @@ public class CloseTrade {
 			// Close the Iron Condor
 			if (longCall != null && shortCall != null && longPut != null && shortPut != null) {
 				
-				System.out.println("Time Closing Cost: " + (Utils.round(longPut.getMean_price() * 100 - shortPut.getMean_price() * 100, 2) +
-						 Utils.round(longCall.getMean_price() * 100 - shortCall.getMean_price() * 100, 2)));
+				System.out.println("Time Closing Cost: " + (Utils.round(longPut.getMean_price() * 100.0 - shortPut.getMean_price() * 100.0, 2) +
+						 Utils.round(longCall.getMean_price() * 100.0 - shortCall.getMean_price() * 100.0, 2)));
 				
-				trade.setClosingCost(Utils.round(longPut.getMean_price() * 100 - shortPut.getMean_price() * 100, 2) +
-									 Utils.round(longCall.getMean_price() * 100 - shortCall.getMean_price() * 100, 2));
+				double closingCost = (longPut.getMean_price() - shortPut.getMean_price() +
+									 longCall.getMean_price() - shortCall.getMean_price()) * 100.0;
+				
+				// Cash settled should only have to pay the spreadwidth to close, but left 2% extra in there to close.
+				trade.setClosingCost(Utils.round(Math.max(-spreadWidth * 102.0 , closingCost), 2));  // 
 				
 				trade.setProfit(Utils.round(trade.getClosingCost() + trade.getOpeningCost(),2));
 				trade.setClose_status(TradeProperties.CLOSE_DTE + " DTE TIME CLOSE");
-				trade.setCloseDate(cal.getTime());
+				trade.setCloseDate(lastOptionTradedCal.getTime());
 				
 				em.merge(trade);
 			}
@@ -782,7 +815,7 @@ public class CloseTrade {
 				trade.setClosingCost(Math.min(0.0, cc));
 				trade.setProfit(Utils.round(trade.getClosingCost() + trade.getOpeningCost(),2));
 				trade.setClose_status(TradeProperties.CLOSE_DTE + " DTE TIME CLOSE");
-				trade.setCloseDate(cal.getTime());
+				trade.setCloseDate(lastOptionTradedCal.getTime());
 				
 				em.merge(trade);
 				
@@ -820,6 +853,55 @@ public class CloseTrade {
 				
 			}
 			
+			// Close the Short Call Spread
+			if (longCall != null && shortCall != null && longPut == null && shortPut == null) {
+				
+				System.out.println("Time Closing Cost: " +  
+													 + Utils.round(longCall.getMean_price(),2) + " - " + Utils.round(shortCall.getMean_price(),2));
+				
+				double cc = Utils.round(longCall.getMean_price() * 100 - shortCall.getMean_price() * 100, 2);
+				// should not be able to close for a credit, it should always cost something or be zero, never a credit
+				trade.setClosingCost(Math.min(0.0, cc));
+				trade.setProfit(Utils.round(trade.getClosingCost() + trade.getOpeningCost(),2));
+				trade.setClose_status(TradeProperties.CLOSE_DTE + " DTE TIME CLOSE");
+				trade.setCloseDate(lastOptionTradedCal.getTime());
+				
+				em.merge(trade);
+				
+				// Save the closing price of the short put in the trade details table
+				TradeDetail closeshortCallTradeDetail = new TradeDetail();
+				
+				closeshortCallTradeDetail.setExecTime(shortCall.getTrade_date());
+				closeshortCallTradeDetail.setExp(shortCall.getExpiration());
+				closeshortCallTradeDetail.setPosEffect("CLOSING");
+				closeshortCallTradeDetail.setPrice(-shortCall.getMean_price());
+				closeshortCallTradeDetail.setQty(TradeProperties.CONTRACTS);
+				closeshortCallTradeDetail.setSide("BUY");
+				closeshortCallTradeDetail.setStrike(shortCall.getStrike());
+				closeshortCallTradeDetail.setSymbol(shortCall.getSymbol());
+				closeshortCallTradeDetail.setTrade(trade);
+				closeshortCallTradeDetail.setType(shortCall.getCall_put().equals("C") ? "CALL" : "PUT");
+				
+				em.persist(closeshortCallTradeDetail);
+				
+				// Save the closing price of the short put in the trade details table
+				TradeDetail closelongCallTradeDetail = new TradeDetail();
+				
+				closelongCallTradeDetail.setExecTime(longCall.getTrade_date());
+				closelongCallTradeDetail.setExp(longCall.getExpiration());
+				closelongCallTradeDetail.setPosEffect("CLOSING");
+				closelongCallTradeDetail.setPrice(longCall.getMean_price());
+				closelongCallTradeDetail.setQty(-TradeProperties.CONTRACTS);
+				closelongCallTradeDetail.setSide("SELL");
+				closelongCallTradeDetail.setStrike(longCall.getStrike());
+				closelongCallTradeDetail.setSymbol(longCall.getSymbol());
+				closelongCallTradeDetail.setTrade(trade);
+				closelongCallTradeDetail.setType(longCall.getCall_put().equals("C") ? "CALL" : "PUT");
+				
+				em.persist(closelongCallTradeDetail);
+				
+			}
+			
 			// Close the Covered Call
 			if (longStock != null && shortCall != null) {
 				double stockClose = Utils.round(shortCall.getAdjusted_stock_close_price(), 2);
@@ -831,7 +913,7 @@ public class CloseTrade {
 				trade.setClosingCost(Utils.round(closingCost, 0));
 				trade.setProfit(trade.getClosingCost() + trade.getOpeningCost()); //Utils.round(trade.getClosingCost() + trade.getOpeningCost(),2));
 				trade.setClose_status(TradeProperties.CLOSE_DTE + " DTE TIME CLOSE");
-				trade.setCloseDate(cal.getTime());				
+				trade.setCloseDate(lastOptionTradedCal.getTime());				
 				
 				em.merge(trade);
 				

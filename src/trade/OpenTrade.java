@@ -78,6 +78,33 @@ public class OpenTrade {
 //		return true;
 //	}
 
+	/**
+	 * Builds a covered call trade
+	 * @param expiration
+	 * @param daysUntilExpiration
+	 * @param delta - used for short strike selection
+	 */
+	public static void coveredCall(Date expiration, int daysUntilExpiration, double delta) {
+
+		String callPut = "C";
+
+		Date tradeDate = Utils.getTradeDate(expiration, daysUntilExpiration);
+
+		OptionPricingService ops = new OptionPricingService();
+		List<OptionPricing> callChain = ops.getOptionChain(tradeDate, expiration, callPut);
+		
+		if (callChain.size() > 0) {
+			
+			OptionPricing callOption = findOptionAtDelta(callChain, delta);
+					
+			double price = callOption.getAdjusted_stock_close_price();
+			System.out.println("Trading a Covered Call on " + Utils.asMMddYY(tradeDate) + " Expires on " + Utils.asMMddYY(expiration) + " Current price: " + price);
+
+			TradeService.openCoveredCall(callOption);
+		}
+	}
+	
+	
 	public static void findIronCondorChains(Date tradeDate, Date expiration, double openDelta, double spreadWidth) {
 		
 		String callPut;
@@ -118,81 +145,6 @@ public class OpenTrade {
 		}
 	}
 	
-	
-	public static void openIronCondor(List<OptionPricing> callChain, List<OptionPricing> putChain, double openDelta, double spreadWidth) {
-		
-		VerticalSpread callSpread = openCallSpread(callChain, openDelta, spreadWidth);
-		VerticalSpread putSpread = openPutSpread(putChain, openDelta, spreadWidth);
-		
-		if (callSpread == null || callSpread.getLongOptionOpen() == null) {
-			System.out.println("null pointer problem");
-		}
-		
-		IronCondor ironCondor = new IronCondor();
-		ironCondor.setCallSpread(callSpread);
-		ironCondor.setPutSpread(putSpread);
-		
-    	TradeService.openIronCondor(ironCondor);
-	}
-	
-	private static VerticalSpread openPutSpread(List<OptionPricing> putChain, double openDelta, double spreadWidth) {
-		
-		// set to true if creating a spread of 1 buy 1 isn't available, then find the next available option
-		boolean enableWidthExtention = false;
-		
-		// Build Put Bull Debit Spread
-		OptionPricing shortPut = findOptionAtDelta(putChain, openDelta);
-		if (shortPut == null) {
-			System.err.println("Could not find a suitable put");
-		}
-		
-		// get long put
-		double putStrike = shortPut.getStrike() - spreadWidth;
-		OptionPricing longPut = null;
-		
-		for (OptionPricing put : putChain) {
-			if (put.getStrike() == putStrike) {
-				longPut = put;
-				break;
-			}
-		}
-		
-		// Add a non-standard spread width long put
-		if (enableWidthExtention && longPut == null) {
-			OptionPricing longPutCandidate = null;
-			System.err.println("Could not pair up short put with a long put");
-			double diff = 1000;
-			for (OptionPricing put : putChain) {
-				if (put.getStrike() < putStrike) {	// make sure we are building a debit spread
-					if (diff > putStrike - put.getStrike()) {
-						longPutCandidate = put;
-						diff = putStrike - put.getStrike();
-					}
-				}				
-			}
-			longPut = longPutCandidate;		// use the next strike available
-		}
-		
-		VerticalSpread putSpread = new VerticalSpread();
-		putSpread.setLongOptionOpen(longPut);
-		putSpread.setShortOptionOpen(shortPut);
-
-		return putSpread;
-	}
-
-
-	private static OptionPricing openShortCall(List<OptionPricing> callChain, double openDelta) {
-		
-		// Build short call
-		OptionPricing shortCall = findOptionAtDelta(callChain, openDelta);
-		if (shortCall == null) {
-			System.err.println("Could not find a suitable call");
-		}
-				
-		return shortCall;
-	}
-
-
 	/**
 	 * Returns the option nearest the specified delta
 	 * 
@@ -216,97 +168,152 @@ public class OpenTrade {
 		return option;
 	}
 
-	private static VerticalSpread openCallSpread(List<OptionPricing> callChain, double openDelta, double spreadWidth) {
-		
-		// Build Call Bear Debit Spread
-		
-		// find short call at delta
-		OptionPricing shortCall = null;
-		double smallestDiff = 1.0;
-		for (OptionPricing call : callChain) {
-			
-			double diffFromDelta = Math.abs(openDelta - call.getDelta());
-			if (diffFromDelta < smallestDiff) {
-				shortCall = call;
-				smallestDiff = diffFromDelta;
-			}
-		}
-		
-		// get long call
-		double longStrike = shortCall.getStrike() + spreadWidth;
-		OptionPricing longCall = null;
-		
-		for (OptionPricing call : callChain) {
-			if (call.getStrike() == longStrike) {
-				longCall = call;
-				break;
-			}
-		}
 
-		if (longCall == null) {
-			OptionPricing longCallCandidate = null;
-			System.err.println("Could not pair up short call with a long call");
-			double diff = 1000;
-			for (OptionPricing call : callChain) {
-				if (call.getStrike() > longStrike) {	// make sure we are building a debit spread
-					if (diff > call.getStrike() - longStrike) {
-						longCallCandidate = call;
-						diff = call.getStrike() - longStrike;
-					}
-				}				
-			}
-			longCall = longCallCandidate;		// use the next strike available
-		}
-		
-
-		// TODO remove this set of code
-		// This may not fix the problem of missing strikes, but hopefully it will fix most of them.
-//		if (longCall == null) {
-//			System.err.println("Unable to set long call at " + longStrike);
-//			int shortStrike = shortCall.getStrike() + 5; // trying the next level
-//			for (OptionPricing call : callChain) {
-//				if (call.getStrike() == shortStrike) {
-//					shortCall = call;
-//				}
-//				if (call.getStrike() == shortStrike + TradeProperties.SPREAD_WIDTH) {
-//					longCall = call;
-//					break;
-//				}
-//			}			
+//	private static OptionPricing openShortCall(List<OptionPricing> callChain, double openDelta) {
+//		
+//		// Build short call
+//		OptionPricing shortCall = findOptionAtDelta(callChain, openDelta);
+//		if (shortCall == null) {
+//			System.err.println("Could not find a suitable call");
 //		}
-		
-		VerticalSpread callSpread = new VerticalSpread();
-		callSpread.setLongOptionOpen(longCall);
-		callSpread.setShortOptionOpen(shortCall);
-
-		return callSpread;
-	}
+//				
+//		return shortCall;
+//	}
 
 
 	/**
-	 * Builds a covered call trade
+	 * Finds the short call on that trade date with the given expiration at the specified delta
+	 * 
+	 * @param tradeDate
 	 * @param expiration
-	 * @param daysUntilExpiration
-	 * @param delta - used for short strike selection
+	 * @param delta
 	 */
-	public static void coveredCall(Date expiration, int daysUntilExpiration, double delta) {
+//	public static void findShortCall(Date tradeDate, Date expiration, double delta) {
+//
+//		String callPut = "C";
+//		OptionPricingService ops = new OptionPricingService();
+//		List<OptionPricing> callChain = ops.getOptionChain(tradeDate, expiration, callPut);
+//		
+//	    if (!callChain.isEmpty()) {
+//	    	try {
+//	    		OptionPricing shortCall = openShortCall(callChain, delta);
+//	    		
+//	    		   // validate contract   			// short option is priced                  // credit is created
+//	    		if (shortCall != null && shortCall.getBid() != 0 && shortCall.getAsk() != 0 && shortCall.getMean_price() > 0) {
+//	    			
+//	    			if (shortCall.getMean_price() != 0.0 && shortCall.getDelta() != 0 ) {
+//	    				
+//	    				// write the opening Trade and TradeDetails to the database
+//	    				TradeService.recordShortCall(shortCall);
+//	    			}
+//	    		}
+//	    	} catch (Exception ex) {
+//	    		ex.printStackTrace();
+//	    		System.err.println("Problem with call chain");
+//	    	}
+//	    } else {
+//	    	System.err.println("Call chain is empty for tradeDate: " + tradeDate + " and expiration: " + expiration);
+//	    }
+//	}
 
-		String callPut = "C";
 
-		Date tradeDate = Utils.getTradeDate(expiration, daysUntilExpiration);
+	public static void findShort(Date tradeDate, Date expiration, double delta, String callPut) {
 
 		OptionPricingService ops = new OptionPricingService();
-		List<OptionPricing> callChain = ops.getOptionChain(tradeDate, expiration, callPut);
+		List<OptionPricing> optChain = ops.getOptionChain(tradeDate, expiration, callPut);
 		
-		if (callChain.size() > 0) {
-			
-			OptionPricing callOption = findOptionAtDelta(callChain, delta);
-					
-			double price = callOption.getAdjusted_stock_close_price();
-			System.out.println("Trading a Covered Call on " + Utils.asMMddYY(tradeDate) + " Expires on " + Utils.asMMddYY(expiration) + " Current price: " + price);
+	    if (!optChain.isEmpty()) {
+	    	try {
+	    		OptionPricing shortOpt = findOptionAtDelta(optChain, delta);
+	    		
+	    		   // validate contract   			// short option is priced                  // credit is created
+	    		if (shortOpt != null && shortOpt.getBid() != 0 && shortOpt.getAsk() != 0 && shortOpt.getMean_price() > 0) {
+	    			
+	    			if (shortOpt.getMean_price() != 0.0 && shortOpt.getDelta() != 0 ) {
+	    				
+	    				// write the opening Trade and TradeDetails to the database
+	    				TradeService.recordShort(shortOpt);
+	    			}
+	    		}
+	    	} catch (Exception ex) {
+	    		ex.printStackTrace();
+	    		System.err.println("Problem with option chain");
+	    	}
+	    } else {
+	    	System.err.println("Option chain is empty for tradeDate: " + tradeDate + " and expiration: " + expiration);
+	    }
+	}
 
-			TradeService.openCoveredCall(callOption);
-		}
+	public static void findShortOptionSpread(Date tradeDate, Date expiration, double delta, double spreadWidth, String callPut) {
+
+		//String callPut = "C";
+		OptionPricingService ops = new OptionPricingService();
+		List<OptionPricing> optChain = ops.getOptionChain(tradeDate, expiration, callPut);
+		
+	    if (!optChain.isEmpty()) {
+	    	try {
+	    		VerticalSpread optSpread = null;
+	    		if (callPut.equals("C")) {
+	    			optSpread = openCallSpread(optChain, delta, spreadWidth);
+	    		} else {
+	    			optSpread = openPutSpread(optChain, delta, spreadWidth);
+	    		}
+	    		// Validating contract pricing
+	    		// found long and short contract
+	    		if (optSpread.getShortOptionOpen() != null && optSpread.getLongOptionOpen() != null
+	    				// long option is priced
+	    				&& optSpread.getLongOptionOpen().getBid() != 0 && optSpread.getLongOptionOpen().getAsk() != 0
+	    				// short option is priced
+	    				&& optSpread.getShortOptionOpen().getBid() != 0 && optSpread.getShortOptionOpen().getAsk() != 0
+	    				// credit is created
+	    				&& optSpread.getOpenCost() < 0) { 
+	    			if (optSpread.getOpenCost() != 0.0 &&
+	    					optSpread.getShortOptionOpen().getDelta() != 0 && optSpread.getLongOptionOpen().getDelta() != 0) {
+	    				TradeService.recordShortOptSpread(optSpread);
+	    			}
+
+	    		}
+	    	} catch (Exception ex) {
+	    		ex.printStackTrace();
+	    		System.err.println("Problem with option chain");
+	    	}
+	    } else {
+	    	System.err.println("Option chain is empty for tradeDate: " + tradeDate + " and expiration: " + expiration);
+	    }
+	}
+
+
+	private static void findShortPutSpread(Date tradeDate, Date expiration, double delta, double spreadWidth) {
+
+		String callPut = "P";
+		OptionPricingService ops = new OptionPricingService();
+		List<OptionPricing> putChain = ops.getOptionChain(tradeDate, expiration, callPut);
+		
+	    if (!putChain.isEmpty()) {
+	    	try {
+	    		VerticalSpread putSpread = openPutSpread(putChain, delta, spreadWidth);
+	    		// Validating contract pricing
+	    		// found long and short contract
+	    		if (putSpread.getShortOptionOpen() != null && putSpread.getLongOptionOpen() != null
+	    				// long option is priced
+	    				&& putSpread.getLongOptionOpen().getBid() != 0 && putSpread.getLongOptionOpen().getAsk() != 0
+	    				// short option is priced
+	    				&& putSpread.getShortOptionOpen().getBid() != 0 && putSpread.getShortOptionOpen().getAsk() != 0
+	    				// credit is created
+	    				&& putSpread.getOpenCost() < 0) { 
+	    			if (putSpread.getOpenCost() != 0.0 &&
+	    					putSpread.getShortOptionOpen().getDelta() != 0 && putSpread.getLongOptionOpen().getDelta() != 0) {
+	    				TradeService.recordShortOptSpread(putSpread);
+	    			}
+
+	    		}
+	    	} catch (Exception ex) {
+	    		ex.printStackTrace();
+	    		System.err.println("Problem with option chain");
+	    	}
+	    } else {
+	    	System.err.println("Option chain is empty for tradeDate: " + tradeDate + " and expiration: " + expiration);
+	    }
 	}
 
 
@@ -415,103 +422,115 @@ public class OpenTrade {
 		return coveredStraddle;
 	}
 
-
-	public static void findShortPutSpread(Date tradeDate, Date expiration, double delta, double spreadWidth) {
-
-		String callPut = "P";
-		OptionPricingService ops = new OptionPricingService();
-		List<OptionPricing> putChain = ops.getOptionChain(tradeDate, expiration, callPut);
+	private static VerticalSpread openCallSpread(List<OptionPricing> callChain, double openDelta, double spreadWidth) {
 		
-	    if (!putChain.isEmpty()) {
-	    	try {
-	    		VerticalSpread putSpread = openPutSpread(putChain, delta, spreadWidth);
-	    		// Validating contract pricing
-	    		// found long and short contract
-	    		if (putSpread.getShortOptionOpen() != null && putSpread.getLongOptionOpen() != null
-	    				// long option is priced
-	    				&& putSpread.getLongOptionOpen().getBid() != 0 && putSpread.getLongOptionOpen().getAsk() != 0
-	    				// short option is priced
-	    				&& putSpread.getShortOptionOpen().getBid() != 0 && putSpread.getShortOptionOpen().getAsk() != 0
-	    				// credit is created
-	    				&& putSpread.getOpenCost() < 0) { 
-	    			if (putSpread.getOpenCost() != 0.0 &&
-	    					putSpread.getShortOptionOpen().getDelta() != 0 && putSpread.getLongOptionOpen().getDelta() != 0) {
-	    				TradeService.recordShortPutSpread(putSpread);
-	    			}
+		// find short call at delta
+		OptionPricing shortCall = findOptionAtDelta(callChain, openDelta);
+//		double smallestDiff = 1.0;
+//		for (OptionPricing call : callChain) {
+//			
+//			double diffFromDelta = Math.abs(openDelta - call.getDelta());
+//			if (diffFromDelta < smallestDiff) {
+//				shortCall = call;
+//				smallestDiff = diffFromDelta;
+//			}
+//		}
+		
+		// get long call
+		double longStrike = shortCall.getStrike() + spreadWidth;
+		OptionPricing longCall = null;
+		
+		for (OptionPricing call : callChain) {
+			if (call.getStrike() == longStrike) {
+				longCall = call;
+				break;
+			}
+		}
 
-	    		}
-	    	} catch (Exception ex) {
-	    		ex.printStackTrace();
-	    		System.err.println("Problem with put chain");
-	    	}
-	    } else {
-	    	System.err.println("Put chain is empty for tradeDate: " + tradeDate + " and expiration: " + expiration);
-	    }
+//		if (longCall == null) {
+//			OptionPricing longCallCandidate = null;
+//			System.err.println("Could not pair up short call with a long call");
+//			double diff = 1000;
+//			for (OptionPricing call : callChain) {
+//				if (call.getStrike() > longStrike) {	// make sure we are building a debit spread
+//					if (diff > call.getStrike() - longStrike) {
+//						longCallCandidate = call;
+//						diff = call.getStrike() - longStrike;
+//					}
+//				}				
+//			}
+//			longCall = longCallCandidate;		// use the next strike available
+//		}
+		
+		VerticalSpread callSpread = new VerticalSpread();
+		callSpread.setLongOptionOpen(longCall);
+		callSpread.setShortOptionOpen(shortCall);
+
+		return callSpread;
+	}
+
+	public static void openIronCondor(List<OptionPricing> callChain, List<OptionPricing> putChain, double openDelta, double spreadWidth) {
+		
+		VerticalSpread callSpread = openCallSpread(callChain, openDelta, spreadWidth);
+		VerticalSpread putSpread = openPutSpread(putChain, openDelta, spreadWidth);
+		
+		if (callSpread == null || callSpread.getLongOptionOpen() == null) {
+			System.out.println("null pointer problem");
+		}
+		
+		IronCondor ironCondor = new IronCondor();
+		ironCondor.setCallSpread(callSpread);
+		ironCondor.setPutSpread(putSpread);
+		
+    	TradeService.openIronCondor(ironCondor);
 	}
 
 
-	/**
-	 * Finds the short call on that trade date with the given expiration at the specified delta
-	 * 
-	 * @param tradeDate
-	 * @param expiration
-	 * @param delta
-	 */
-//	public static void findShortCall(Date tradeDate, Date expiration, double delta) {
-//
-//		String callPut = "C";
-//		OptionPricingService ops = new OptionPricingService();
-//		List<OptionPricing> callChain = ops.getOptionChain(tradeDate, expiration, callPut);
-//		
-//	    if (!callChain.isEmpty()) {
-//	    	try {
-//	    		OptionPricing shortCall = openShortCall(callChain, delta);
-//	    		
-//	    		   // validate contract   			// short option is priced                  // credit is created
-//	    		if (shortCall != null && shortCall.getBid() != 0 && shortCall.getAsk() != 0 && shortCall.getMean_price() > 0) {
-//	    			
-//	    			if (shortCall.getMean_price() != 0.0 && shortCall.getDelta() != 0 ) {
-//	    				
-//	    				// write the opening Trade and TradeDetails to the database
-//	    				TradeService.recordShortCall(shortCall);
-//	    			}
-//	    		}
-//	    	} catch (Exception ex) {
-//	    		ex.printStackTrace();
-//	    		System.err.println("Problem with call chain");
-//	    	}
-//	    } else {
-//	    	System.err.println("Call chain is empty for tradeDate: " + tradeDate + " and expiration: " + expiration);
-//	    }
-//	}
-
-
-	public static void findShort(Date tradeDate, Date expiration, double delta, String callPut) {
-
-		OptionPricingService ops = new OptionPricingService();
-		List<OptionPricing> optChain = ops.getOptionChain(tradeDate, expiration, callPut);
+	private static VerticalSpread openPutSpread(List<OptionPricing> putChain, double openDelta, double spreadWidth) {
 		
-	    if (!optChain.isEmpty()) {
-	    	try {
-	    		OptionPricing shortOpt = findOptionAtDelta(optChain, delta);
-	    		
-	    		   // validate contract   			// short option is priced                  // credit is created
-	    		if (shortOpt != null && shortOpt.getBid() != 0 && shortOpt.getAsk() != 0 && shortOpt.getMean_price() > 0) {
-	    			
-	    			if (shortOpt.getMean_price() != 0.0 && shortOpt.getDelta() != 0 ) {
-	    				
-	    				// write the opening Trade and TradeDetails to the database
-	    				TradeService.recordShort(shortOpt);
-	    			}
-	    		}
-	    	} catch (Exception ex) {
-	    		ex.printStackTrace();
-	    		System.err.println("Problem with option chain");
-	    	}
-	    } else {
-	    	System.err.println("Option chain is empty for tradeDate: " + tradeDate + " and expiration: " + expiration);
-	    }
+		// set to true if creating a spread of 1 buy 1 isn't available, then find the next available option
+//		boolean enableWidthExtention = false;
+		
+		// Build Put Bull Debit Spread
+		OptionPricing shortPut = findOptionAtDelta(putChain, openDelta);
+		if (shortPut == null) {
+			System.err.println("Could not find a suitable put");
+		}
+		
+		// get long put
+		double putStrike = shortPut.getStrike() - spreadWidth;
+		OptionPricing longPut = null;
+		
+		for (OptionPricing put : putChain) {
+			if (put.getStrike() == putStrike) {
+				longPut = put;
+				break;
+			}
+		}
+		
+		// Add a non-standard spread width long put
+//		if (enableWidthExtention && longPut == null) {
+//			OptionPricing longPutCandidate = null;
+//			System.err.println("Could not pair up short put with a long put");
+//			double diff = 1000;
+//			for (OptionPricing put : putChain) {
+//				if (put.getStrike() < putStrike) {	// make sure we are building a debit spread
+//					if (diff > putStrike - put.getStrike()) {
+//						longPutCandidate = put;
+//						diff = putStrike - put.getStrike();
+//					}
+//				}				
+//			}
+//			longPut = longPutCandidate;		// use the next strike available
+//		}
+		
+		VerticalSpread putSpread = new VerticalSpread();
+		putSpread.setLongOptionOpen(longPut);
+		putSpread.setShortOptionOpen(shortPut);
+
+		return putSpread;
 	}
+
 
 
 

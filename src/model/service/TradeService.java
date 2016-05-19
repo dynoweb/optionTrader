@@ -28,67 +28,65 @@ public class TradeService {
 //		em.getTransaction().commit();
 //	}
 
-	public static void openIronCondor(IronCondor ironCondor) { 
-			
-		Trade trade = new Trade();
-		int contracts = TradeProperties.CONTRACTS;
-		
-		VerticalSpread callSpread = ironCondor.getCallSpread();
-		VerticalSpread putSpread = ironCondor.getPutSpread();
-		
-		TradeDetail shortCall = null;
-		TradeDetail longCall = null;
-		TradeDetail shortPut = null;
-		TradeDetail longPut = null;
-    	try {
-			shortCall = initializeTradeDetail(callSpread.getShortOptionOpen(), -contracts, "OPENING", "SELL");
-			longCall = initializeTradeDetail(callSpread.getLongOptionOpen(), contracts, "OPENING", "BUY");
-			shortPut = initializeTradeDetail(putSpread.getShortOptionOpen(), -contracts, "OPENING", "SELL");
-    		longPut = initializeTradeDetail(putSpread.getLongOptionOpen(), contracts, "OPENING", "BUY");
-    	} catch (Exception ex) {
-    		ex.printStackTrace();
-    		throw ex;
-    	}
-		
-		trade.setExecTime(shortCall.getExecTime());
-		trade.setExp(shortCall.getExp());
-		trade.setTradeType("IRON CONDOR");
-		trade.setClose_status("OPEN");
-		
-		double openingCost = Utils.round(shortPut.getPrice() * 100 + longPut.getPrice() * 100, 2) +
-							 Utils.round(shortCall.getPrice() * 100 + longCall.getPrice() * 100, 2);
-				 
-		trade.setOpeningCost(openingCost);
+	public static List<Trade> getOpenTrades() {
 
 		EntityManagerFactory emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
 		EntityManager em = emf.createEntityManager();
+	
+		// Note: table name refers to the Entity Class and is case sensitive
+		//       field names are property names in the Entity Class
+		Query query = em.createQuery("select rec from Trade rec "
+				+ "where rec.close_status = :closeStatus "
+//				+ "opt.trade_date = :tradeDate " 
+//				+ "and opt.expiration=:expiration "	
+//				+ "and opt.call_put = :call_put "
+//				+ "and opt.delta > 0.04 "
+//				+ "and opt.delta < 0.96 "
+				+ "order by rec.exp");
 		
-		em.getTransaction().begin();		
-		em.persist(trade);
-		
-		shortCall.setTrade(trade);
-		em.persist(shortCall);
-		
-		longCall.setTrade(trade);
-		em.persist(longCall);
-		
-		shortPut.setTrade(trade);
-		em.persist(shortPut);
-		
-		longPut.setTrade(trade);
-		em.persist(longPut);
-		
-		em.getTransaction().commit();
+		query.setParameter("closeStatus", "OPEN");
+
+		@SuppressWarnings("unchecked")
+		List<Trade> trades = query.getResultList();
+//		Trade trade = trades.get(0);
+//		List<TradeDetail> tradeDetails = trade.getTradeDetails();
 		em.close();
-		emf.close();
+		
+		return trades;
 	}
+	
+	public static List<Trade> getTrades() {
+		
+		EntityManagerFactory emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
+		EntityManager em = emf.createEntityManager();
+	
+		// Note: table name refers to the Entity Class and is case sensitive
+		//       field names are property names in the Entity Class
+		Query query = em.createQuery("select rec from Trade rec "
+//				+ "where rec.close_status = :closeStatus "
+//				+ "opt.trade_date = :tradeDate " 
+//				+ "and opt.expiration=:expiration "	
+//				+ "and opt.call_put = :call_put "
+//				+ "and opt.delta > 0.04 "
+//				+ "and opt.delta < 0.96 "
+				+ "order by rec.exp");
+		
+		//query.setParameter("closeStatus", "OPEN");
+
+		@SuppressWarnings("unchecked")
+		List<Trade> trades = query.getResultList();
+	
+		em.close();
+		
+		return trades;
+	}
+	
 	
 	public static TradeDetail initializeTradeDetail(OptionPricing optionPricing, int contracts, String posEffect, String side) {
 		
 		return initializeTradeDetail(optionPricing, contracts, posEffect, side, "Current close price: " + optionPricing.getAdjusted_stock_close_price() + " Delta: " + optionPricing.getDelta());
 	}
-	
-	
+
 	/**
 	 * Populates a TradeDetail view object to eventually be saved into the TradeDetail table.
 	 *  
@@ -126,57 +124,6 @@ public class TradeService {
 //		tradeService.addTrade(trade);		
 //
 		return tradeDetail;
-	}
-
-	public static List<Trade> getOpenTrades() {
-
-		EntityManagerFactory emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
-		EntityManager em = emf.createEntityManager();
-	
-		// Note: table name refers to the Entity Class and is case sensitive
-		//       field names are property names in the Entity Class
-		Query query = em.createQuery("select rec from Trade rec "
-				+ "where rec.close_status = :closeStatus "
-//				+ "opt.trade_date = :tradeDate " 
-//				+ "and opt.expiration=:expiration "	
-//				+ "and opt.call_put = :call_put "
-//				+ "and opt.delta > 0.04 "
-//				+ "and opt.delta < 0.96 "
-				+ "order by rec.exp");
-		
-		query.setParameter("closeStatus", "OPEN");
-
-		List<Trade> trades = query.getResultList();
-//		Trade trade = trades.get(0);
-//		List<TradeDetail> tradeDetails = trade.getTradeDetails();
-		em.close();
-		
-		return trades;
-	}
-
-	public static List<Trade> getTrades() {
-		
-		EntityManagerFactory emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
-		EntityManager em = emf.createEntityManager();
-	
-		// Note: table name refers to the Entity Class and is case sensitive
-		//       field names are property names in the Entity Class
-		Query query = em.createQuery("select rec from Trade rec "
-//				+ "where rec.close_status = :closeStatus "
-//				+ "opt.trade_date = :tradeDate " 
-//				+ "and opt.expiration=:expiration "	
-//				+ "and opt.call_put = :call_put "
-//				+ "and opt.delta > 0.04 "
-//				+ "and opt.delta < 0.96 "
-				+ "order by rec.exp");
-		
-		//query.setParameter("closeStatus", "OPEN");
-
-		List<Trade> trades = query.getResultList();
-	
-		em.close();
-		
-		return trades;
 	}
 
 	public static void openCoveredCall(OptionPricing option) {
@@ -263,9 +210,186 @@ public class TradeService {
 		
 		return trade;
 	}
+
+	public static void openIronCondor(IronCondor ironCondor) { 
+			
+		Trade trade = new Trade();
+		int contracts = TradeProperties.CONTRACTS;
+		
+		VerticalSpread callSpread = ironCondor.getCallSpread();
+		VerticalSpread putSpread = ironCondor.getPutSpread();
+		
+		TradeDetail shortCall = null;
+		TradeDetail longCall = null;
+		TradeDetail shortPut = null;
+		TradeDetail longPut = null;
+    	try {
+			shortCall = initializeTradeDetail(callSpread.getShortOptionOpen(), -contracts, "OPENING", "SELL");
+			longCall = initializeTradeDetail(callSpread.getLongOptionOpen(), contracts, "OPENING", "BUY");
+			shortPut = initializeTradeDetail(putSpread.getShortOptionOpen(), -contracts, "OPENING", "SELL");
+    		longPut = initializeTradeDetail(putSpread.getLongOptionOpen(), contracts, "OPENING", "BUY");
+    	} catch (Exception ex) {
+    		ex.printStackTrace();
+    		throw ex;
+    	}
+		
+		trade.setExecTime(shortCall.getExecTime());
+		trade.setExp(shortCall.getExp());
+		trade.setTradeType("IRON CONDOR");
+		trade.setClose_status("OPEN");
+		
+		double openingCost = Utils.round(shortPut.getPrice() * 100 + longPut.getPrice() * 100, 2) +
+							 Utils.round(shortCall.getPrice() * 100 + longCall.getPrice() * 100, 2);
+				 
+		trade.setOpeningCost(openingCost);
+
+		EntityManagerFactory emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
+		EntityManager em = emf.createEntityManager();
+		
+		em.getTransaction().begin();		
+		em.persist(trade);
+		
+		shortCall.setTrade(trade);
+		em.persist(shortCall);
+		
+		longCall.setTrade(trade);
+		em.persist(longCall);
+		
+		shortPut.setTrade(trade);
+		em.persist(shortPut);
+		
+		longPut.setTrade(trade);
+		em.persist(longPut);
+		
+		em.getTransaction().commit();
+		em.close();
+		emf.close();
+	}
 	
-	public static void recordShortPutSpread(VerticalSpread putSpread)
-	{
+	public static void recordShort(OptionPricing shortOption) {
+		
+		Trade trade = new Trade();
+		//int contracts = TradeProperties.CONTRACTS;
+		
+		TradeDetail shortTrade = null;
+		
+		//OptionPricing shortCall = null;
+    	try {
+    		shortTrade = initializeTradeDetail(shortOption, -TradeProperties.CONTRACTS, "OPENING", "SELL");
+    	} catch (Exception ex) {
+    		ex.printStackTrace();
+    		throw ex;
+    	}
+		
+		trade.setExecTime(shortTrade.getExecTime());
+		trade.setExp(shortTrade.getExp());
+		trade.setTradeType("SHORT " + (shortOption.getCall_put().equals("C") ? "CALL" : "PUT"));
+		trade.setClose_status("OPEN");
+		
+		double openingCost = Utils.round(shortTrade.getPrice() * 100, 2);
+		trade.setOpeningCost(openingCost);
+
+		EntityManagerFactory emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
+		EntityManager em = emf.createEntityManager();
+		
+		em.getTransaction().begin();		
+		em.persist(trade);
+		
+		shortTrade.setTrade(trade);
+		em.persist(shortTrade);
+		
+		em.getTransaction().commit();
+		em.close();
+		emf.close();
+
+	}
+
+	/**
+	 * Used to capture the opening Trade and TradeDetails EO's and saves the data.
+	 * 
+	 * @param shortCall
+	 */
+	public static void recordShortCall(OptionPricing shortCall) {
+		
+		Trade trade = new Trade();
+		//int contracts = TradeProperties.CONTRACTS;
+		
+		TradeDetail shortCallTrade = null;
+		
+		//OptionPricing shortCall = null;
+    	try {
+    		shortCallTrade = initializeTradeDetail(shortCall, -TradeProperties.CONTRACTS, "OPENING", "SELL");
+    	} catch (Exception ex) {
+    		ex.printStackTrace();
+    		throw ex;
+    	}
+		
+		trade.setExecTime(shortCallTrade.getExecTime());
+		trade.setExp(shortCallTrade.getExp());
+		trade.setTradeType("SHORT CALL");
+		trade.setClose_status("OPEN");
+		
+		double openingCost = Utils.round(shortCallTrade.getPrice() * 100, 2);
+		trade.setOpeningCost(openingCost);
+
+		EntityManagerFactory emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
+		EntityManager em = emf.createEntityManager();
+		
+		em.getTransaction().begin();		
+		em.persist(trade);
+		
+		shortCallTrade.setTrade(trade);
+		em.persist(shortCallTrade);
+		
+		em.getTransaction().commit();
+		em.close();
+		emf.close();
+
+	}
+
+	public static void recordShortOptSpread(VerticalSpread optSpread) {
+
+		Trade trade = new Trade();
+		int contracts = TradeProperties.CONTRACTS;
+		
+		TradeDetail shortOpt = null;
+		TradeDetail longOpt = null;
+    	try {
+			shortOpt = initializeTradeDetail(optSpread.getShortOptionOpen(), -contracts, "OPENING", "SELL");
+    		longOpt = initializeTradeDetail(optSpread.getLongOptionOpen(), contracts, "OPENING", "BUY");
+    	} catch (Exception ex) {
+    		ex.printStackTrace();
+    		throw ex;
+    	}
+		
+		trade.setExecTime(shortOpt.getExecTime());
+		trade.setExp(shortOpt.getExp());
+		trade.setTradeType("SHORT " + shortOpt.getTrade() + " SPREAD");
+		trade.setClose_status("OPEN");
+		
+		double openingCost = Utils.round(shortOpt.getPrice() * 100 + 
+										  longOpt.getPrice() * 100, 2);
+		trade.setOpeningCost(openingCost);
+
+		EntityManagerFactory emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
+		EntityManager em = emf.createEntityManager();
+		
+		em.getTransaction().begin();		
+		em.persist(trade);
+		
+		shortOpt.setTrade(trade);
+		em.persist(shortOpt);
+		
+		longOpt.setTrade(trade);
+		em.persist(longOpt);
+		
+		em.getTransaction().commit();
+		em.close();
+		emf.close();
+	}
+
+	private static void recordShortPutSpread(VerticalSpread putSpread) {
+		
 		Trade trade = new Trade();
 		int contracts = TradeProperties.CONTRACTS;
 		
@@ -303,86 +427,5 @@ public class TradeService {
 		em.getTransaction().commit();
 		em.close();
 		emf.close();
-	}
-
-	/**
-	 * Used to capture the opening Trade and TradeDetails EO's and saves the data.
-	 * 
-	 * @param shortCall
-	 */
-	public static void recordShortCall(OptionPricing shortCall) {
-		
-		Trade trade = new Trade();
-		int contracts = TradeProperties.CONTRACTS;
-		
-		TradeDetail shortCallTrade = null;
-		
-		//OptionPricing shortCall = null;
-    	try {
-    		shortCallTrade = initializeTradeDetail(shortCall, -TradeProperties.CONTRACTS, "OPENING", "SELL");
-    	} catch (Exception ex) {
-    		ex.printStackTrace();
-    		throw ex;
-    	}
-		
-		trade.setExecTime(shortCallTrade.getExecTime());
-		trade.setExp(shortCallTrade.getExp());
-		trade.setTradeType("SHORT CALL");
-		trade.setClose_status("OPEN");
-		
-		double openingCost = Utils.round(shortCallTrade.getPrice() * 100, 2);
-		trade.setOpeningCost(openingCost);
-
-		EntityManagerFactory emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
-		EntityManager em = emf.createEntityManager();
-		
-		em.getTransaction().begin();		
-		em.persist(trade);
-		
-		shortCallTrade.setTrade(trade);
-		em.persist(shortCallTrade);
-		
-		em.getTransaction().commit();
-		em.close();
-		emf.close();
-
-	}
-
-	public static void recordShort(OptionPricing shortOption) {
-		
-		Trade trade = new Trade();
-		int contracts = TradeProperties.CONTRACTS;
-		
-		TradeDetail shortTrade = null;
-		
-		//OptionPricing shortCall = null;
-    	try {
-    		shortTrade = initializeTradeDetail(shortOption, -TradeProperties.CONTRACTS, "OPENING", "SELL");
-    	} catch (Exception ex) {
-    		ex.printStackTrace();
-    		throw ex;
-    	}
-		
-		trade.setExecTime(shortTrade.getExecTime());
-		trade.setExp(shortTrade.getExp());
-		trade.setTradeType("SHORT " + (shortOption.getCall_put().equals("C") ? "CALL" : "PUT"));
-		trade.setClose_status("OPEN");
-		
-		double openingCost = Utils.round(shortTrade.getPrice() * 100, 2);
-		trade.setOpeningCost(openingCost);
-
-		EntityManagerFactory emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
-		EntityManager em = emf.createEntityManager();
-		
-		em.getTransaction().begin();		
-		em.persist(trade);
-		
-		shortTrade.setTrade(trade);
-		em.persist(shortTrade);
-		
-		em.getTransaction().commit();
-		em.close();
-		emf.close();
-
 	}
 }

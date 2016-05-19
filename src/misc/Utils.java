@@ -4,23 +4,23 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
+//import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
-import java.util.HashMap;
+//import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+//import java.util.regex.Matcher;
+//import java.util.regex.Pattern;
 
 import main.TradeProperties;
 import model.Holiday;
 import model.service.ExpirationService;
 import model.service.HolidayService;
 import model.service.MarketOpenService;
-import model.service.OptionsExpirationService;
+//import model.service.OptionsExpirationService;
 
 public class Utils {
 
@@ -362,15 +362,15 @@ public class Utils {
 //		
 //		System.out.println("Days: " + Utils.calculateDaysBetween(startDate, endDate));
 		
-		SimpleDateFormat sdf = new SimpleDateFormat("MMM dd, yyyy ");		
+//		SimpleDateFormat sdf = new SimpleDateFormat("MMM dd, yyyy ");		
 		
-		Date date = new Date(2009-1900, 11, 29);
-		System.out.println("Date: " + date);
-		System.out.println("Formated: " + sdf.format(date));
-		
-		date = new Date(2010-1900, 0, 1);
-		System.out.println("Date: " + date);
-		System.out.println("Formated: " + sdf.format(date));
+//		Date date = new Date(2009-1900, 11, 29);
+//		System.out.println("Date: " + date);
+//		System.out.println("Formated: " + sdf.format(date));
+//		
+//		date = new Date(2010-1900, 0, 1);
+//		System.out.println("Date: " + date);
+//		System.out.println("Formated: " + sdf.format(date));
 	}
 
 	

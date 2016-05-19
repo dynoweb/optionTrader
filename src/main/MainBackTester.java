@@ -3,6 +3,9 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
+import org.joda.time.DateTime;
+import org.joda.time.Duration;
+
 import trade.CloseTrade;
 import trade.CoveredStraddle;
 import trade.OpenTrade;
@@ -28,6 +31,8 @@ public class MainBackTester {
 //		    System.out.println ("openTradeDate: "  + openTradeDate + " optionsExpiration: " + optionsExpiration + " Days: " + TimeUnit.DAYS.convert(diff, TimeUnit.MILLISECONDS));
 //		}
 		
+		DateTime start = new DateTime();
+		
 		switch (TradeProperties.TRADE_TYPE) {
 		case "COVERED_CALL":
 			bt.coveredCallBackTest();
@@ -37,6 +42,9 @@ public class MainBackTester {
 			break;
 		case "IRON_CONDOR":
 			bt.ironCondorBackTest();
+			break;
+		case "SHORT_CALL_SPREAD":
+			bt.shortCallSpreadTest();
 			break;
 		case "SHORT_PUT_SPREAD":
 			bt.shortPutSpreadTest();
@@ -51,37 +59,54 @@ public class MainBackTester {
 			System.err.println("Unknown trade type: " + TradeProperties.TRADE_TYPE);
 			break;
 		}
+		
+		System.out.println("Processing time: " + new Duration(start, new DateTime()));
 	}
 	
 	private void ironCondorBackTest() {
 	
-		//double[] spreadWidths = { TradeProperties.SPREAD_WIDTH }; 
-		double[] spreadWidths = { 5 }; //, 10, 25, 50 };
-		//double[] spreadWidths = { 1.0, 2.0, 3.0, 5.0, 10 };
-		//double[] deltas = {TradeProperties.OPEN_DELTA};
-		double[] deltas = {0.0228}; //, 0.0668, 0.1, 0.1587, 0.2, 0.3, 0.35}; 
-		for (double delta : deltas) {
+		boolean useWeekly = true;
 		
-			for (double spreadWidth : spreadWidths) {
+		//double[] spreadWidths = { TradeProperties.SPREAD_WIDTH }; 
+		double[] spreadWidths = { 5, 10, 25, 50 };
+		//double[] spreadWidths = { 1.0, 2.0, 3.0, 5.0, 10 };
+		
+		//double[] deltas = {TradeProperties.OPEN_DELTA};
+		//double[] deltas = {0.0228, 0.0668, 0.1, 0.1587, 0.2, 0.3, 0.35};
+		double[] deltas = {0.1, 0.1587, 0.2, 0.25, 0.3, 0.35};
+		
+		//int[] openDte = {TradeProperties.OPEN_DTE};
+		//int[] openDte = {7, 14, 28, 45};
+		int[] openDte = {7, 14};
+		
+		for (int dte :  openDte) {
+			
+			for (double delta : deltas) {
 				
-				DbService.resetDataBase();
-				
-				Map<Date, Date> potentialTrades = Utils.getPotentialTrades(TradeProperties.OPEN_DTE);		
-				
-				for (Map.Entry<Date, Date> tradeDateSet : potentialTrades.entrySet()) {
-				    Date tradeDate = tradeDateSet.getKey();
-				    Date expiration = tradeDateSet.getValue();
-				    
-				    System.out.println("checking: tradeDate: "  + Utils.asMMMddYYYY(tradeDate) + " expiration: " + Utils.asMMMddYYYY(expiration));
-				    OpenTrade.findIronCondorChains(tradeDate, expiration, delta, spreadWidth);
-				}
+				for (double spreadWidth : spreadWidths) {
 					
-				CloseTrade.closeTrades();
-				
-				Report.buildIronCondorReport(delta, spreadWidth);
+					DbService.resetDataBase();
+					
+					Map<Date, Date> potentialTrades = null;
+					if (useWeekly) {
+						potentialTrades = Utils.getPotentialWeeklyTrades(dte);
+					} else {
+						potentialTrades = Utils.getPotentialTrades(dte);
+					}
+					
+					for (Map.Entry<Date, Date> tradeDateSet : potentialTrades.entrySet()) {
+					    Date tradeDate = tradeDateSet.getKey();
+					    Date expiration = tradeDateSet.getValue();
+					    
+					    System.out.println("checking: tradeDate: "  + Utils.asMMMddYYYY(tradeDate) + " expiration: " + Utils.asMMMddYYYY(expiration));
+					    OpenTrade.findIronCondorChains(tradeDate, expiration, delta, spreadWidth);
+					}
+					
+					CloseTrade.closeTrades(TradeProperties.TRADE_TYPE, spreadWidth);
+					Report.buildIronCondorReport(delta, spreadWidth, dte);
+				}
 			}
 		}
-		
 		System.out.println("Finished!");
 	}
 
@@ -117,7 +142,7 @@ public class MainBackTester {
 				}
 				System.out.println("================= All trades opened - checking closing trade =================");
 				
-				CloseTrade.closeTrades();
+				CloseTrade.closeTrades(TradeProperties.TRADE_TYPE, 0);
 				
 				Report.buildCoveredCallReport(delta, dte);
 			}
@@ -161,7 +186,7 @@ public class MainBackTester {
 			CoveredCallTradeManager tm = new CoveredCallTradeManager(coveredStraddle, expirations, dte, initialDelta);
 			tm.manageTrade();
 			
-			CloseTrade.closeTrades();
+			CloseTrade.closeTrades(TradeProperties.TRADE_TYPE, 0);
 			
 			Report.buildCoveredStraddleReport(dte);
 		}
@@ -170,8 +195,7 @@ public class MainBackTester {
 		System.out.println("Finished!");
 	}
 
-
-	private void shortPutSpreadTest() {
+	private void shortCallSpreadTest() {
 		
 		//double[] spreadWidths = { TradeProperties.SPREAD_WIDTH }; 
 		double[] spreadWidths = { 5, 10, 25, 50 };
@@ -201,12 +225,53 @@ public class MainBackTester {
 					    Date expiration = tradeDateSet.getValue();
 					    
 					    System.out.println("checking: tradeDate: "  + Utils.asMMMddYYYY(tradeDate) + " expiration: " + Utils.asMMMddYYYY(expiration));
-					    OpenTrade.findShortPutSpread(tradeDate, expiration, delta, spreadWidth);
+					    OpenTrade.findShortOptionSpread(tradeDate, expiration, delta, spreadWidth, "C");
+					}
+					CloseTrade.closeTrades(TradeProperties.TRADE_TYPE, 0);
+					Report.shortSpreadReport(delta, spreadWidth, dte, "Short Call Spread");
+				}
+			}
+		}
+		
+		System.out.println("Finished!");
+	}
+
+	private void shortPutSpreadTest() {
+		
+		double[] spreadWidths = { TradeProperties.SPREAD_WIDTH }; 
+		//double[] spreadWidths = { 5, 10, 25, 50 };
+		//double[] spreadWidths = { 1.0, 2.0, 3.0, 5.0, 10 };
+		
+		double[] deltas = {TradeProperties.OPEN_DELTA};
+		//double[] deltas = {0.0228, 0.0668, 0.1, 0.1587, 0.2, 0.3};
+		//double[] deltas = {0.1, 0.1587, 0.2, 0.3};
+		//double[] deltas = {0.0228, 0.0668};
+		//double[] deltas = {0.25};
+
+		int[] openDte = {TradeProperties.OPEN_DTE};
+		//int[] openDte = {7, 14, 28, 45};
+		
+		for (int dte :  openDte) {
+			
+			for (double delta : deltas) {
+			
+				for (double spreadWidth : spreadWidths) {
+					
+					DbService.resetDataBase();
+					
+					Map<Date, Date> potentialTrades = Utils.getPotentialWeeklyTrades(dte);		
+					
+					for (Map.Entry<Date, Date> tradeDateSet : potentialTrades.entrySet()) {
+					    Date tradeDate = tradeDateSet.getKey();
+					    Date expiration = tradeDateSet.getValue();
+					    
+					    System.out.println("checking: tradeDate: "  + Utils.asMMMddYYYY(tradeDate) + " expiration: " + Utils.asMMMddYYYY(expiration));
+					    OpenTrade.findShortOptionSpread(tradeDate, expiration, delta, spreadWidth, "P");
 					}
 						
-					CloseTrade.closeTrades();
+					CloseTrade.closeTrades(TradeProperties.TRADE_TYPE, 0);
 					
-					Report.shortPutSpreadReport(delta, spreadWidth, dte);
+					Report.shortSpreadReport(delta, spreadWidth, dte, "Short Put Spread");
 				}
 			}
 		}
@@ -266,8 +331,8 @@ public class MainBackTester {
 		//double[] deltas = {0.0228, 0.0668};
 		//double[] deltas = {0.25};
 		
-		int[] openDte = {TradeProperties.OPEN_DTE};
-		//int[] openDte = {7, 14, 28, 45};
+		//int[] openDte = {TradeProperties.OPEN_DTE};
+		int[] openDte = {7, 14, 28, 45};
 		
 		double[] profitTargets = {TradeProperties.PROFIT_TARGET};
 		//double[] profitTargets = {0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9}; 

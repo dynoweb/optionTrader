@@ -56,6 +56,31 @@ public class OptionPricingService {
 	}
 	
 	/**
+	 * Returns the last date this symbol was traded on for a specified option.
+	 * 
+	 * @return last trade date
+	 */
+	public static Date getLastTradeDateForOption(Date expiration) {
+		
+		EntityManagerFactory emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
+		EntityManager em = emf.createEntityManager();
+		
+		// Note: table name refers to the Entity Class and is case sensitive
+		//       field names are property names in the Entity Class
+		Query query = em.createQuery("select max(opt.trade_date) from " + TradeProperties.SYMBOL_FOR_QUERY + " opt where "
+				+ "opt.expiration=:expiration ");
+
+		query.setParameter("expiration", expiration);
+		
+		query.setHint("odb.read-only", "true");
+
+		Date lastTradeDate = (Date) query.getSingleResult();	
+		em.close();
+		
+		return lastTradeDate;
+	}
+	
+	/**
 	 * Get option pricing records for a range of trade dates for a particular expiration at a strike and callPutType.
 	 * 
 	 * @param startTradeDate
