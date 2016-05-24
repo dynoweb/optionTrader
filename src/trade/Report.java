@@ -10,12 +10,18 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.Persistence;
+
 import org.joda.time.DateTime;
 import org.joda.time.Days;
 
 import main.TradeProperties;
 import misc.Utils;
+import model.Result;
 import model.Trade;
+import model.service.ResultService;
 import model.service.TradeService;
 
 /**
@@ -52,7 +58,10 @@ public class Report {
 
 	final static Charset ENCODING = StandardCharsets.UTF_8;
 	static String reportFolder = "C:\\_eProj\\optionsdb\\testResults\\";
-	
+
+	static EntityManagerFactory emf = null;
+	static EntityManager em = null; 
+
 	private static void buildHeader(List<String> lines) {
 		
 		lines.add("<!DOCTYPE html>");
@@ -123,7 +132,7 @@ public class Report {
 		}
 	}
 	
-	public static void buildIronCondorReport(double delta, double spreadWidth, int dte) {
+	public static void buildIronCondorReport(double shortDelta, double spreadWidth, int dte) {
 		
 		List<String> lines = new ArrayList<String>();
 
@@ -140,7 +149,7 @@ public class Report {
 		int daysInTrade = 0;
 
 		lines.add("<H3>"+ TradeProperties.SYMBOL + " - Iron Condor</H3>");
-		lines.add("<H3> Short Delta: " + delta + ", Days To Expiration: " + dte + ", Spread Width: " + spreadWidth + "</H3>");
+		lines.add("<H3> Short Delta: " + shortDelta + ", Days To Expiration: " + dte + ", Spread Width: " + spreadWidth + "</H3>");
 		lines.add("<H3>Profit Target: " + (TradeProperties.PROFIT_TARGET * 100) + "%, Max Loss: " + (TradeProperties.MAX_LOSS * 100) + "%, Close at: " + TradeProperties.CLOSE_DTE + " DTE</H3>");		
 		lines.add("</CENTER>");
 		
@@ -167,7 +176,7 @@ public class Report {
 			lines.add("  <TR>"
 					+ "<TD>"+Utils.asMMddYY(trade.getExecTime())+"</TD><TD>"+Utils.asMMddYY(trade.getCloseDate())+"</TD>"
 					+ "<TD>"+Utils.asMMddYY(trade.getExp())+"</TD><TD>"+trade.getClose_status()+"</TD>"
-					+ "<TD>"+(trade.getOpeningCost())+"</TD><TD>"+trade.getClosingCost()+"</TD><TD>"+trade.getProfit()+"</TD>"
+					+ "<TD>"+Utils.round(trade.getOpeningCost(), 2)+"</TD><TD>"+Utils.round(trade.getClosingCost(), 2)+"</TD><TD>"+Utils.round(trade.getProfit(), 2)+"</TD>"
 					+ "<TD>"+Utils.round(netProfit, 2)+"</TD><TD>"+Utils.round(drawDown,2)+"</TD>"
 					+ "</TR>");
 			
@@ -175,15 +184,27 @@ public class Report {
 
 		lines.add("<tbody></TABLE>");
 		lines.add("<br/><h3>Trades: " + numberOfTrades + "</h3>");
+		
+		double avgDaysInTrade = 0;
+		double avgReturnPerTrade = 0.0;
+		double creditPerTrade = 0;
+		double percentProfitable = 0.0;
+		double profitPerDay = 0.0;
+		double profitPerTrade = 0.0;
+		
 		if (numberOfTrades > 0) {
-			lines.add("<h3>Avg Profit Per Trade: $" + Utils.round(netProfit/numberOfTrades,2) + "</h3>");
-			lines.add("<h3>Avg Credit Per Trade: " + Utils.round(grossCredit/numberOfTrades, 2) + "</h3>");
-			double profitPerDay = Utils.round(netProfit/daysInTrade, 2);
-			double avgReturnPerTrade = Utils.round(100.0 * netProfit/grossRisk, 2);
+			profitPerTrade = Utils.round(netProfit/numberOfTrades,2);
+			lines.add("<h3>Avg Profit Per Trade: $" + profitPerTrade + "</h3>");
+			creditPerTrade = Utils.round(grossCredit/numberOfTrades, 2);
+			lines.add("<h3>Avg Credit Per Trade: " + creditPerTrade + "</h3>");
+			avgReturnPerTrade = Utils.round(100.0 * netProfit/grossRisk, 2);
 			lines.add("<h3>Avg Return Per Trade: " + avgReturnPerTrade + "%</h3>");
+			profitPerDay = Utils.round(netProfit/daysInTrade, 2);
 			lines.add("<h3>Profit Per Day: $" + profitPerDay + "</h3>");
-			lines.add("<h3>Average Days In Trade: " + Utils.round(daysInTrade/numberOfTrades, 1) + "</h3>");
-			lines.add("<h3>Profitable Trades: " + Utils.round(100.0 * profitableTrades/numberOfTrades, 2) + "%</h3>");
+			avgDaysInTrade = Utils.round(daysInTrade/numberOfTrades, 1);
+			lines.add("<h3>Average Days In Trade: " + avgDaysInTrade + "</h3>");
+			percentProfitable = Utils.round(100.0 * profitableTrades/numberOfTrades, 2);
+			lines.add("<h3>Profitable Trades: " + percentProfitable + "%</h3>");
 			lines.add("<h3>        Max Drawdown: $" + Utils.round(maxDD, 2) + "</h3>");
 		}
 		
@@ -191,12 +212,49 @@ public class Report {
 		lines.add("</BODY></HTML>");
 		
 		String outFileName = reportFolder + "IC_" + TradeProperties.SYMBOL 
-				+ "_D_" + delta
-				+ "_DTE_" + TradeProperties.OPEN_DTE 
+				+ "_D_" + shortDelta
+				+ "_DTE_" + dte
 				+ "_SW_" + spreadWidth 
 				+ "_PT_" + (TradeProperties.PROFIT_TARGET * 100.0) 
 				+ "_SL_" + (TradeProperties.MAX_LOSS * 100.0)
 				+ "_CDTE_" + TradeProperties.CLOSE_DTE + ".html";
+		
+		emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
+		em = emf.createEntityManager();
+		em.getTransaction().begin();		
+
+		Result result = ResultService.getRecord(dte, shortDelta, spreadWidth, 0.0, 0.0);
+		if (result == null) {
+			result = new Result();
+		}
+		
+		result.setAvgDaysInTrade(avgDaysInTrade);
+		result.setCreditPerTrade(creditPerTrade);
+		result.setDte(dte);
+		result.setMaxDd(Utils.round(maxDD, 2));
+		result.setNetProfit(Utils.round(netProfit, 2));
+		result.setProfitable(percentProfitable);
+		result.setProfitPerDay(profitPerDay);
+		result.setProfitPerTrade(profitPerTrade);
+		result.setProfitTarget(0.0);
+		result.setReturnPerTrade(avgReturnPerTrade);
+		result.setShortDelta(shortDelta);
+		result.setStopLoss(0.0);
+		result.setSymbol(TradeProperties.SYMBOL);
+		result.setTrades(numberOfTrades);
+		result.setTradeType(TradeProperties.TRADE_TYPE);
+		result.setWidth(spreadWidth);
+
+		if (result.getId() == 0) {
+			em.persist(result);		// insert
+		} else {
+			em.merge(result);		// update
+		}
+		
+		em.getTransaction().commit();
+		em.close();
+		emf.close();
+		
 		try {
 			writeTextFile(outFileName, lines);
 		} catch (IOException e) {

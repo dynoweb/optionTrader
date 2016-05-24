@@ -72,12 +72,14 @@ public class MainBackTester {
 		//double[] spreadWidths = { 1.0, 2.0, 3.0, 5.0, 10 };
 		
 		//double[] deltas = {TradeProperties.OPEN_DELTA};
-		//double[] deltas = {0.0228, 0.0668, 0.1, 0.1587, 0.2, 0.3, 0.35};
-		double[] deltas = {0.1, 0.1587, 0.2, 0.25, 0.3, 0.35};
+		//double[] deltas = {0.0228, 0.0668, 0.1, 0.1587, 0.2, 0.3, 0.35, 0.4, 0.45};
+		//double[] deltas = {0.1, 0.1587, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45};
+		//double[] deltas = {0.4, 0.45};
+		double[] deltas = {0.0228, 0.0668};
 		
 		//int[] openDte = {TradeProperties.OPEN_DTE};
-		//int[] openDte = {7, 14, 28, 45};
-		int[] openDte = {7, 14};
+		int[] openDte = {7, 14, 28, 45};
+		//int[] openDte = {7, 14};
 		
 		for (int dte :  openDte) {
 			

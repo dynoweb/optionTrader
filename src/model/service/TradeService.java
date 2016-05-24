@@ -84,7 +84,7 @@ public class TradeService {
 	
 	public static TradeDetail initializeTradeDetail(OptionPricing optionPricing, int contracts, String posEffect, String side) {
 		
-		return initializeTradeDetail(optionPricing, contracts, posEffect, side, "Current close price: " + optionPricing.getAdjusted_stock_close_price() + " Delta: " + optionPricing.getDelta());
+		return initializeTradeDetail(optionPricing, contracts, posEffect, side, "Current close price," + optionPricing.getAdjusted_stock_close_price() + ",Delta," + optionPricing.getDelta());
 	}
 
 	/**
@@ -115,7 +115,9 @@ public class TradeService {
 		tradeDetail.setStrike((double) optionPricing.getStrike());
 		tradeDetail.setSymbol(optionPricing.getSymbol());
 		tradeDetail.setType(optionPricing.getCall_put().equals("C") ? "CALL" : "PUT");
-		tradeDetail.setComment(comment);
+		tradeDetail.setStockPrice(optionPricing.getAdjusted_stock_close_price());
+		tradeDetail.setDelta(optionPricing.getDelta());
+		//tradeDetail.setComment(comment);
 		
 //		Trade trade = new Trade();
 //		trade.addTradeDetail(tradeDetail);
@@ -229,8 +231,8 @@ public class TradeService {
 			shortPut = initializeTradeDetail(putSpread.getShortOptionOpen(), -contracts, "OPENING", "SELL");
     		longPut = initializeTradeDetail(putSpread.getLongOptionOpen(), contracts, "OPENING", "BUY");
     	} catch (Exception ex) {
-    		ex.printStackTrace();
-    		throw ex;
+    		//ex.printStackTrace();
+    		//throw ex;
     	}
 		
 		trade.setExecTime(shortCall.getExecTime());

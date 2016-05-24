@@ -30,6 +30,11 @@ public class TradeDetail implements Serializable {
 
 	private double price;
 
+	@Column(name="stock_price")
+	private double stockPrice;
+
+	private double delta;
+
 	private int qty;
 
 	private String side;
@@ -89,6 +94,22 @@ public class TradeDetail implements Serializable {
 
 	public void setPrice(double price) {
 		this.price = price;
+	}
+
+	public double getStockPrice() {
+		return stockPrice;
+	}
+
+	public void setStockPrice(double stockPrice) {
+		this.stockPrice = stockPrice;
+	}
+
+	public double getDelta() {
+		return delta;
+	}
+
+	public void setDelta(double delta) {
+		this.delta = delta;
 	}
 
 	public int getQty() {

@@ -138,8 +138,8 @@ public class OpenTrade {
 		    	try {
 		    		openIronCondor(callChain, putChain, openDelta, spreadWidth);
 		    	} catch (Exception ex) {
-		    		ex.printStackTrace();
-		    		System.err.println("Problem with put or call chain");
+//		    		ex.printStackTrace();
+//		    		System.err.println("Problem with put or call chain");
 		    	}
 		    }
 		}
