@@ -135,7 +135,8 @@ public class TradeService {
 		trade.setExecTime(option.getTrade_date());
 		trade.setExp(option.getExpiration());
 		trade.setTradeType("COVERED CALL");		
-		trade.setOpeningCost((Math.round(option.getMean_price()*100) - Math.round(option.getAdjusted_stock_close_price()*100)) * TradeProperties.CONTRACTS);		
+		double fees = TradeProperties.CONTRACTS * 1 * TradeProperties.COST_PER_CONTRACT_FEE + TradeProperties.COST_PER_STOCK_TRADE_FEE;
+		trade.setOpeningCost((Math.round(option.getMean_price()*100) - Math.round(option.getAdjusted_stock_close_price()*100)) * TradeProperties.CONTRACTS + fees);		
 		trade.setClose_status("OPEN");
 		
 		TradeDetail shortCall = initializeTradeDetail(option, -TradeProperties.CONTRACTS, "OPENING", "SELL");
@@ -239,9 +240,11 @@ public class TradeService {
 		trade.setExp(shortCall.getExp());
 		trade.setTradeType("IRON CONDOR");
 		trade.setClose_status("OPEN");
-		
+
+		double fees = contracts * 4 * TradeProperties.COST_PER_CONTRACT_FEE;
 		double openingCost = Utils.round(shortPut.getPrice() * 100 + longPut.getPrice() * 100, 2) +
-							 Utils.round(shortCall.getPrice() * 100 + longCall.getPrice() * 100, 2);
+							 Utils.round(shortCall.getPrice() * 100 + longCall.getPrice() * 100, 2) +
+							 fees;
 				 
 		trade.setOpeningCost(openingCost);
 
@@ -288,6 +291,7 @@ public class TradeService {
 		trade.setTradeType("SHORT " + (shortOption.getCall_put().equals("C") ? "CALL" : "PUT"));
 		trade.setClose_status("OPEN");
 		
+		double fees = TradeProperties.CONTRACTS * 1 * TradeProperties.COST_PER_CONTRACT_FEE;
 		double openingCost = Utils.round(shortTrade.getPrice() * 100, 2);
 		trade.setOpeningCost(openingCost);
 
@@ -331,7 +335,8 @@ public class TradeService {
 		trade.setTradeType("SHORT CALL");
 		trade.setClose_status("OPEN");
 		
-		double openingCost = Utils.round(shortCallTrade.getPrice() * 100, 2);
+		double fees = TradeProperties.CONTRACTS * 1 * TradeProperties.COST_PER_CONTRACT_FEE;
+		double openingCost = Utils.round(shortCallTrade.getPrice() * 100, 2) + fees;
 		trade.setOpeningCost(openingCost);
 
 		EntityManagerFactory emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
@@ -369,8 +374,9 @@ public class TradeService {
 		trade.setTradeType("SHORT " + shortOpt.getTrade() + " SPREAD");
 		trade.setClose_status("OPEN");
 		
+		double fees = contracts * 2 * TradeProperties.COST_PER_CONTRACT_FEE;
 		double openingCost = Utils.round(shortOpt.getPrice() * 100 + 
-										  longOpt.getPrice() * 100, 2);
+										  longOpt.getPrice() * 100 + fees, 2);
 		trade.setOpeningCost(openingCost);
 
 		EntityManagerFactory emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
@@ -390,44 +396,44 @@ public class TradeService {
 		emf.close();
 	}
 
-	private static void recordShortPutSpread(VerticalSpread putSpread) {
-		
-		Trade trade = new Trade();
-		int contracts = TradeProperties.CONTRACTS;
-		
-		TradeDetail shortPut = null;
-		TradeDetail longPut = null;
-    	try {
-			shortPut = initializeTradeDetail(putSpread.getShortOptionOpen(), -contracts, "OPENING", "SELL");
-    		longPut = initializeTradeDetail(putSpread.getLongOptionOpen(), contracts, "OPENING", "BUY");
-    	} catch (Exception ex) {
-    		ex.printStackTrace();
-    		throw ex;
-    	}
-		
-		trade.setExecTime(shortPut.getExecTime());
-		trade.setExp(shortPut.getExp());
-		trade.setTradeType("SHORT PUT SPREAD");
-		trade.setClose_status("OPEN");
-		
-		double openingCost = Utils.round(shortPut.getPrice() * 100 + 
-										  longPut.getPrice() * 100, 2);
-		trade.setOpeningCost(openingCost);
-
-		EntityManagerFactory emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
-		EntityManager em = emf.createEntityManager();
-		
-		em.getTransaction().begin();		
-		em.persist(trade);
-		
-		shortPut.setTrade(trade);
-		em.persist(shortPut);
-		
-		longPut.setTrade(trade);
-		em.persist(longPut);
-		
-		em.getTransaction().commit();
-		em.close();
-		emf.close();
-	}
+//	private static void recordShortPutSpread(VerticalSpread putSpread) {
+//		
+//		Trade trade = new Trade();
+//		int contracts = TradeProperties.CONTRACTS;
+//		
+//		TradeDetail shortPut = null;
+//		TradeDetail longPut = null;
+//    	try {
+//			shortPut = initializeTradeDetail(putSpread.getShortOptionOpen(), -contracts, "OPENING", "SELL");
+//    		longPut = initializeTradeDetail(putSpread.getLongOptionOpen(), contracts, "OPENING", "BUY");
+//    	} catch (Exception ex) {
+//    		ex.printStackTrace();
+//    		throw ex;
+//    	}
+//		
+//		trade.setExecTime(shortPut.getExecTime());
+//		trade.setExp(shortPut.getExp());
+//		trade.setTradeType("SHORT PUT SPREAD");
+//		trade.setClose_status("OPEN");
+//		
+//		double openingCost = Utils.round(shortPut.getPrice() * 100 + 
+//										  longPut.getPrice() * 100, 2);
+//		trade.setOpeningCost(openingCost);
+//
+//		EntityManagerFactory emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
+//		EntityManager em = emf.createEntityManager();
+//		
+//		em.getTransaction().begin();		
+//		em.persist(trade);
+//		
+//		shortPut.setTrade(trade);
+//		em.persist(shortPut);
+//		
+//		longPut.setTrade(trade);
+//		em.persist(longPut);
+//		
+//		em.getTransaction().commit();
+//		em.close();
+//		emf.close();
+//	}
 }

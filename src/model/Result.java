@@ -64,6 +64,10 @@ public class Result implements Serializable {
 
 	private int trades;
 
+	@Column(name = "updated", insertable = false, updatable = true)
+	@Temporal(TemporalType.TIMESTAMP)
+	private Date updated;
+
 	private double width;
 
 	public Result() {
@@ -203,6 +207,14 @@ public class Result implements Serializable {
 
 	public void setTradeType(String tradeType) {
 		this.tradeType = tradeType;
+	}
+
+	public Date getUpdated() {
+		return this.updated;
+	}
+
+	public void setUpdated(Date updated) {
+		this.updated = updated;
 	}
 
 	public double getWidth() {

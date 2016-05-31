@@ -700,7 +700,8 @@ public class CloseTrade {
 			// Close the Short Call
 			if (longCall == null && shortCall != null && longPut == null && shortPut == null) {
 				
-				trade.setClosingCost(Utils.round(- shortCall.getMean_price() * 100, 2));
+				double fees = TradeProperties.CONTRACTS * 1 * TradeProperties.COST_PER_CONTRACT_FEE;
+				trade.setClosingCost(Utils.round(- shortCall.getMean_price() * 100 + fees, 2));
 				System.out.println("Time Closing Cost: " + trade.getClosingCost());
 				
 				trade.setProfit(Utils.round(trade.getClosingCost() + trade.getOpeningCost(),2));
@@ -740,7 +741,9 @@ public class CloseTrade {
 					itmCallCost = Math.max(itmCallCost, csWidth);
 				}
 				
-				double closingCost = Utils.round(Math.min(itmPutCost, itmCallCost) * 100, 2);
+				// assuming closing the entire tested spread
+				double fees = TradeProperties.CONTRACTS * 2 * TradeProperties.COST_PER_CONTRACT_FEE;
+				double closingCost = Utils.round(Math.min(itmPutCost, itmCallCost) * 100 + fees, 2);
 				
 				System.out.println("Time Closing Cost: " + closingCost + " for stock price: " + shortPut.getAdjusted_stock_close_price());
 				
@@ -768,10 +771,23 @@ public class CloseTrade {
 			// Close the Short Put Spread
 			if (longCall == null && shortCall == null && longPut != null && shortPut != null) {
 				
-				System.out.println("Time Closing Cost: " +  
-													 + Utils.round(longPut.getMean_price(),2) + " - " + Utils.round(shortPut.getMean_price(),2));
+				double stockPrice = shortPut.getAdjusted_stock_close_price();
 				
-				double cc = Utils.round(longPut.getMean_price() * 100 - shortPut.getMean_price() * 100, 2);
+				// calculate closing cost if ITM
+				double itmPutCost = stockPrice < shortPut.getStrike() ? stockPrice - shortPut.getStrike() : 0.0;
+				if (itmPutCost != 0.0) {
+					double psWidth = longPut.getStrike() - shortPut.getStrike();
+					itmPutCost = Math.max(itmPutCost, psWidth);	// buy back cost
+				}
+				
+				double cc = 0.0;
+				if (itmPutCost != 0.0) {
+					double fees = TradeProperties.CONTRACTS * 2 * TradeProperties.COST_PER_CONTRACT_FEE;
+					cc = Utils.round(itmPutCost * 100.0 + fees, 2);
+				}
+
+				System.out.println("Time Closing Cost: " + cc);
+								
 				// should not be able to close for a credit, it should always cost something or be zero, never a credit
 				trade.setClosingCost(Math.min(0.0, cc));
 				trade.setProfit(Utils.round(trade.getClosingCost() + trade.getOpeningCost(),2));
@@ -793,7 +809,21 @@ public class CloseTrade {
 				System.out.println("Time Closing Cost: " +  
 													 + Utils.round(longCall.getMean_price(),2) + " - " + Utils.round(shortCall.getMean_price(),2));
 				
-				double cc = Utils.round(longCall.getMean_price() * 100 - shortCall.getMean_price() * 100, 2);
+				double stockPrice = shortCall.getAdjusted_stock_close_price();
+				
+				// calculate closing cost if ITM
+				double itmCallCost = stockPrice > shortCall.getStrike() ? shortCall.getStrike() - stockPrice : 0.0;
+				if (itmCallCost != 0.0) {
+					double psWidth = shortCall.getStrike() - longCall.getStrike(); // width expressed as a debt (negative number)
+					itmCallCost = Math.max(itmCallCost, psWidth);	// buy back cost
+				}
+				
+				double cc = 0.0;
+				if (itmCallCost != 0.0) {
+					double fees = TradeProperties.CONTRACTS * 2 * TradeProperties.COST_PER_CONTRACT_FEE;
+					cc = Utils.round(itmCallCost * 100.0 + fees, 2);
+				}
+				
 				// should not be able to close for a credit, it should always cost something or be zero, never a credit
 				trade.setClosingCost(Math.min(0.0, cc));
 				trade.setProfit(Utils.round(trade.getClosingCost() + trade.getOpeningCost(),2));
@@ -813,8 +843,9 @@ public class CloseTrade {
 				System.out.println("Time Closing Cost: " + stockClose + " - "  
 						 + shortCall.getMean_price());
 
-				double closingCost = Math.min(shortCall.getStrike(), (stockClose - shortCall.getMean_price())) * 100.00;
-				trade.setClosingCost(Utils.round(closingCost, 0));
+				double fees = TradeProperties.CONTRACTS * TradeProperties.COST_PER_CONTRACT_FEE + TradeProperties.COST_PER_STOCK_TRADE_FEE;
+				double closingCost = Math.min(shortCall.getStrike(), (stockClose - shortCall.getMean_price())) * 100.00 + fees;
+				trade.setClosingCost(Utils.round(closingCost, 2));
 				trade.setProfit(trade.getClosingCost() + trade.getOpeningCost()); //Utils.round(trade.getClosingCost() + trade.getOpeningCost(),2));
 				trade.setClose_status(TradeProperties.CLOSE_DTE + " DTE TIME CLOSE");
 				trade.setCloseDate(lastOptionTradedCal.getTime());				

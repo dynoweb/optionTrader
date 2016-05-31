@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import javax.persistence.EntityManager;
@@ -68,8 +69,7 @@ public class Report {
 		lines.add("<HTML><head>");
 		lines.add("<link rel=\"stylesheet\" href=\"trade.css\"/>");
 		lines.add("</head>");
-		lines.add("<BODY><CENTER>");
-		
+		lines.add("<BODY><CENTER>");	
 	}
 
 	public static void buildCoveredCallReport(double delta, int dte) {
@@ -185,6 +185,31 @@ public class Report {
 		lines.add("<tbody></TABLE>");
 		lines.add("<br/><h3>Trades: " + numberOfTrades + "</h3>");
 		
+		calculateTradeResults(shortDelta, dte, lines, netProfit, grossRisk, grossCredit, maxDD, numberOfTrades,
+				profitableTrades, daysInTrade, spreadWidth);
+		
+		lines.add("<h3>Net Profit: $" + Utils.round(netProfit,2) + "</h3></CENTER>");
+		lines.add("</BODY></HTML>");
+
+		String outFileName = reportFolder + "IC_" + TradeProperties.SYMBOL 
+				+ "_D_" + shortDelta
+				+ "_DTE_" + dte
+				+ "_SW_" + spreadWidth 
+				+ "_PT_" + (TradeProperties.PROFIT_TARGET * 100.0) 
+				+ "_SL_" + (TradeProperties.MAX_LOSS * 100.0)
+				+ "_CDTE_" + TradeProperties.CLOSE_DTE + ".html";
+		
+		try {
+			writeTextFile(outFileName, lines);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	private static void calculateTradeResults(double shortDelta, int dte, List<String> lines, double netProfit,
+			double grossRisk, double grossCredit, double maxDD, int numberOfTrades, int profitableTrades,
+			int daysInTrade, double spreadWidth) {
+		
 		double avgDaysInTrade = 0;
 		double avgReturnPerTrade = 0.0;
 		double creditPerTrade = 0;
@@ -206,18 +231,15 @@ public class Report {
 			percentProfitable = Utils.round(100.0 * profitableTrades/numberOfTrades, 2);
 			lines.add("<h3>Profitable Trades: " + percentProfitable + "%</h3>");
 			lines.add("<h3>        Max Drawdown: $" + Utils.round(maxDD, 2) + "</h3>");
-		}
-		
-		lines.add("<h3>Net Profit: $" + Utils.round(netProfit,2) + "</h3></CENTER>");
-		lines.add("</BODY></HTML>");
-		
-		String outFileName = reportFolder + "IC_" + TradeProperties.SYMBOL 
-				+ "_D_" + shortDelta
-				+ "_DTE_" + dte
-				+ "_SW_" + spreadWidth 
-				+ "_PT_" + (TradeProperties.PROFIT_TARGET * 100.0) 
-				+ "_SL_" + (TradeProperties.MAX_LOSS * 100.0)
-				+ "_CDTE_" + TradeProperties.CLOSE_DTE + ".html";
+		}		
+
+		captureResults(shortDelta, spreadWidth, dte, netProfit, maxDD, numberOfTrades, avgDaysInTrade,
+				avgReturnPerTrade, creditPerTrade, percentProfitable, profitPerDay, profitPerTrade);
+	}
+
+	private static void captureResults(double shortDelta, double spreadWidth, int dte, double netProfit, double maxDD,
+			int numberOfTrades, double avgDaysInTrade, double avgReturnPerTrade, double creditPerTrade,
+			double percentProfitable, double profitPerDay, double profitPerTrade) {
 		
 		emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
 		em = emf.createEntityManager();
@@ -225,7 +247,7 @@ public class Report {
 
 		Result result = ResultService.getRecord(dte, shortDelta, spreadWidth, 0.0, 0.0);
 		if (result == null) {
-			result = new Result();
+		 	result = new Result();
 		}
 		
 		result.setAvgDaysInTrade(avgDaysInTrade);
@@ -244,6 +266,7 @@ public class Report {
 		result.setTrades(numberOfTrades);
 		result.setTradeType(TradeProperties.TRADE_TYPE);
 		result.setWidth(spreadWidth);
+		result.setUpdated(new Date());
 
 		if (result.getId() == 0) {
 			em.persist(result);		// insert
@@ -254,15 +277,9 @@ public class Report {
 		em.getTransaction().commit();
 		em.close();
 		emf.close();
-		
-		try {
-			writeTextFile(outFileName, lines);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
 	}
 	
-	static void writeTextFile(String fileName, List<String> lines) throws IOException {
+	private static void writeTextFile(String fileName, List<String> lines) throws IOException {
 		
 		Path path = Paths.get(fileName);
 		try (BufferedWriter writer = Files.newBufferedWriter(path, ENCODING)){
@@ -274,7 +291,7 @@ public class Report {
 		}
 	}
 
-	public static void shortSpreadReport(double delta, double spreadWidth, int dte, String tradeType) {
+	public static void shortSpreadReport(double shortDelta, double spreadWidth, int dte) {
 		
 		List<String> lines = new ArrayList<String>();
 
@@ -290,8 +307,9 @@ public class Report {
 		int profitableTrades = 0;
 		int daysInTrade = 0;
 
+		String tradeType = TradeProperties.TRADE_TYPE.equals("SHORT_PUT_SPREAD") ? "Short Put Spread" : "Short Call Spread";
 		lines.add("<H3>"+ TradeProperties.SYMBOL + " - " + tradeType + "</H3>");
-		lines.add("<H3>" + " Short Delta: " + delta + ", Days To Expiration: " + dte + ", width: " + spreadWidth + "</H3>");
+		lines.add("<H3>" + " Short Delta: " + shortDelta + ", Days To Expiration: " + dte + ", width: " + spreadWidth + "</H3>");
 		lines.add("<H3>Profit Target: " + (TradeProperties.PROFIT_TARGET * 100) + "%, Max Loss: " + (TradeProperties.MAX_LOSS * 100) + "%, Close at: " + TradeProperties.CLOSE_DTE + " DTE</H3>");		
 		lines.add("</CENTER>");
 
@@ -317,39 +335,36 @@ public class Report {
 			daysInTrade += days.getDays();
 			
 			lines.add("  <TR>"
-					+ "<TD>"+Utils.asMMddYY(trade.getExecTime())+"</TD><TD>"+Utils.asMMddYY(trade.getCloseDate())+"</TD>"
-					+ "<TD>"+Utils.asMMddYY(trade.getExp())+"</TD><TD>"+trade.getClose_status()+"</TD>"
-					+ "<TD>"+(trade.getOpeningCost())+"</TD><TD>"+trade.getClosingCost()+"</TD><TD>"+trade.getProfit()+"</TD>"
-					+ "<TD>"+Utils.round(netProfit, 2)+"</TD><TD>"+Utils.round(drawDown,2)+"</TD>"
+					+ "<TD>" + Utils.asMMddYY(trade.getExecTime()) + "</TD>"
+					+ "<TD>" + Utils.asMMddYY(trade.getCloseDate()) + "</TD>"
+					+ "<TD>" + Utils.asMMddYY(trade.getExp()) + "</TD>"
+					+ "<TD>" + trade.getClose_status() + "</TD>"
+					+ "<TD>" + trade.getOpeningCost() + "</TD>"
+					+ "<TD>" + trade.getClosingCost() + "</TD>"
+					+ "<TD>" + trade.getProfit() + "</TD>"
+					+ "<TD>" + Utils.round(netProfit, 2) + "</TD>"
+					+ "<TD>" + Utils.round(drawDown,2) + "</TD>"
 					+ "</TR>");			
 		}
 		
 		lines.add("<tbody></TABLE>");
 		lines.add("<br/><h3>Trades: " + numberOfTrades + "</h3>");
-		if (numberOfTrades > 0) {
-			lines.add("<h3>Avg Profit Per Trade: $" + Utils.round(netProfit/numberOfTrades,2) + "</h3>");
-			double avgCreditPerTrade = Utils.round(grossCredit/numberOfTrades, 2);
-			lines.add("<h3>Avg Credit Per Trade: $" + avgCreditPerTrade + "</h3>");
-			double profitPerDay = Utils.round(netProfit/daysInTrade, 2);
-			double avgReturnPerTrade = Utils.round(100.0 * netProfit/grossRisk, 2);
-			lines.add("<h3>Avg Return Per Trade: " + avgReturnPerTrade + "%</h3>");
-			lines.add("<h3>Profit Per Day: $" + profitPerDay + "</h3>");
-			lines.add("<h3>Average Days In Trade: " + Utils.round(daysInTrade/numberOfTrades, 1) + "</h3>");
-			lines.add("<h3>Profitable Trades: " + Utils.round(100 * profitableTrades/numberOfTrades, 2) + "%</h3>");
-			lines.add("<h3>        Max Drawdown: $" + Utils.round(maxDD, 2) + "</h3>");
-		}
 
+		calculateTradeResults(shortDelta, dte, lines, netProfit, grossRisk, grossCredit, maxDD, numberOfTrades,
+				profitableTrades, daysInTrade, spreadWidth);
+		
 		lines.add("<h3>Net Profit: $" + Utils.round(netProfit,2) + "</h3></CENTER>");
 		lines.add("</BODY></HTML>");
 		
 		String prefix = tradeType.equals("Short Put Spread") ? "SPS_" : "SCS_";
 		String outFileName = reportFolder + prefix + TradeProperties.SYMBOL 
-				+ "_D_" + delta 
+				+ "_D_" + shortDelta 
 				+ "_DTE_" + dte 
 				+ "_SW" + spreadWidth
 				+ "_PT_" + (TradeProperties.PROFIT_TARGET * 100) 
 				+ "_SL_" + (TradeProperties.MAX_LOSS * 100)
 				+ "_CDTE_" + TradeProperties.CLOSE_DTE + ".html";
+		
 		try {
 			writeTextFile(outFileName, lines);
 		} catch (IOException e) {
@@ -357,15 +372,17 @@ public class Report {
 		}
 	}
 
-	public static void shortOptionReport(double delta, int dte, double profitTarget) {
+	public static void shortOptionReport(double shortDelta, int dte, double profitTarget) {
 
 		List<String> lines = new ArrayList<String>();
 
 		buildHeader(lines);
+		
+		double spreadWidth = 0;		// for spreads, this is passed into the method
 
 		double netProfit = 0.0;
-		//double grossRisk = 0.0;
-		double grossCredit = 0.0;
+		double grossRisk = 0.0;
+		double grossCredit = 0.0;	// not used for unlimited risk trades	
 		double maxProfit = Double.MIN_VALUE;;
 		double maxDD = 0.0;
 		double drawDown = 0.0;
@@ -375,7 +392,7 @@ public class Report {
 
 		String tradeType = TradeProperties.TRADE_TYPE.equals("SHORT_CALL") ? "Short Call" : "Short Put";
 		lines.add("<H3>" + tradeType + " - "+ TradeProperties.SYMBOL + "</H3>");
-		lines.add("<H3>" + " Short Delta: " + delta + " Days To Expiration: " + dte + "</H3>");
+		lines.add("<H3>" + " Short Delta: " + shortDelta + " Days To Expiration: " + dte + "</H3>");
 		lines.add("<H3>Profit Target: " + (profitTarget * 100) + "%, Max Loss: " + (TradeProperties.MAX_LOSS * 100) + "%, Close at: " + TradeProperties.CLOSE_DTE + " DTE</H3>");		
 		lines.add("</CENTER>");
 
@@ -411,27 +428,22 @@ public class Report {
 		
 		lines.add("<tbody></TABLE>");
 		lines.add("<br/><h3>Trades: " + numberOfTrades + "</h3>");
-		if (numberOfTrades > 0) {
-			lines.add("<h3>Avg Profit Per Trade: $" + Utils.round(netProfit/numberOfTrades,2) + "</h3>");
-			double avgCreditPerTrade = Utils.round(grossCredit/numberOfTrades, 2);
-			lines.add("<h3>Avg Credit Per Trade: $" + avgCreditPerTrade + "</h3>");
-			double profitPerDay = Utils.round(netProfit/daysInTrade, 2);
-			lines.add("<h3>Profit Per Day: $" + profitPerDay + "</h3>");
-			lines.add("<h3>Average Days In Trade: " + Utils.round(daysInTrade/numberOfTrades, 1) + "</h3>");
-			lines.add("<h3>Profitable Trades: " + Utils.round(100 * profitableTrades/numberOfTrades, 2) + "%</h3>");
-			lines.add("<h3>        Max Drawdown: $" + Utils.round(maxDD, 2) + "</h3>");
-		}
+
+		calculateTradeResults(shortDelta, dte, lines, netProfit, grossRisk, grossCredit, maxDD, numberOfTrades,
+				profitableTrades, daysInTrade, spreadWidth);
+
 		lines.add("<h3>Net Profit: $" + Utils.round(netProfit,2) + "</h3></CENTER>");
 		lines.add("</BODY></HTML>");
 		
 		String fileNamePrefix = TradeProperties.TRADE_TYPE.equals("SHORT_CALL") ? "SC_" : "SP_";
 		String outFileName = reportFolder + fileNamePrefix + TradeProperties.SYMBOL 
-				+ "_D_" + delta 
+				+ "_D_" + shortDelta 
 				+ "_DTE_" + dte 
 				//+ "_SW" + spreadWidth
 				+ "_PT_" + (profitTarget * 100) 
 				+ "_SL_" + (TradeProperties.MAX_LOSS * 100)
 				+ "_CDTE_" + TradeProperties.CLOSE_DTE + ".html";
+		
 		try {
 			writeTextFile(outFileName, lines);
 		} catch (IOException e) {

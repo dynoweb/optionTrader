@@ -68,18 +68,22 @@ public class MainBackTester {
 		boolean useWeekly = true;
 		
 		//double[] spreadWidths = { TradeProperties.SPREAD_WIDTH }; 
-		double[] spreadWidths = { 5, 10, 25, 50 };
+		//double[] spreadWidths = { 5, 10, 25, 50 };
 		//double[] spreadWidths = { 1.0, 2.0, 3.0, 5.0, 10 };
+		double[] spreadWidths = { 1.0, 2.0, 3.0, 5.0, 10.0 };
 		
 		//double[] deltas = {TradeProperties.OPEN_DELTA};
 		//double[] deltas = {0.0228, 0.0668, 0.1, 0.1587, 0.2, 0.3, 0.35, 0.4, 0.45};
 		//double[] deltas = {0.1, 0.1587, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45};
+		double[] deltas = {0.1, 0.1587, 0.2};
 		//double[] deltas = {0.4, 0.45};
-		double[] deltas = {0.0228, 0.0668};
+		//double[] deltas = {0.0228, 0.0668};
 		
 		//int[] openDte = {TradeProperties.OPEN_DTE};
 		int[] openDte = {7, 14, 28, 45};
 		//int[] openDte = {7, 14};
+		//int[] openDte = {28, 45};
+
 		
 		for (int dte :  openDte) {
 			
@@ -199,18 +203,21 @@ public class MainBackTester {
 
 	private void shortCallSpreadTest() {
 		
-		//double[] spreadWidths = { TradeProperties.SPREAD_WIDTH }; 
-		double[] spreadWidths = { 5, 10, 25, 50 };
-		//double[] spreadWidths = { 1.0, 2.0, 3.0, 5.0, 10 };
+		double[] spreadWidths = { TradeProperties.SPREAD_WIDTH }; 
+		//double[] spreadWidths = { 5, 10, 25, 50 };
+		//double[] spreadWidths = { 1.0, 2.0, 3.0, 5.0 };
+		//double[] spreadWidths = { 1.0, 2.0, 3.0 };
 		
-		//double[] deltas = {TradeProperties.OPEN_DELTA};
+		double[] deltas = {TradeProperties.OPEN_DELTA};
 		//double[] deltas = {0.0228, 0.0668, 0.1, 0.1587, 0.2, 0.3};
-		double[] deltas = {0.1, 0.1587, 0.2, 0.3};
+		//double[] deltas = {0.1, 0.1587, 0.2, 0.3};
 		//double[] deltas = {0.0228, 0.0668};
 		//double[] deltas = {0.25};
 
-		//int[] openDte = {TradeProperties.OPEN_DTE};
-		int[] openDte = {7, 14, 28, 45};
+		int[] openDte = {TradeProperties.OPEN_DTE};
+		//int[] openDte = {7, 14, 28, 45};
+		//int[] openDte = {7, 14};
+		//int[] openDte = {28, 45};
 		
 		for (int dte :  openDte) {
 			
@@ -230,7 +237,7 @@ public class MainBackTester {
 					    OpenTrade.findShortOptionSpread(tradeDate, expiration, delta, spreadWidth, "C");
 					}
 					CloseTrade.closeTrades(TradeProperties.TRADE_TYPE, 0);
-					Report.shortSpreadReport(delta, spreadWidth, dte, "Short Call Spread");
+					Report.shortSpreadReport(delta, spreadWidth, dte);
 				}
 			}
 		}
@@ -240,18 +247,24 @@ public class MainBackTester {
 
 	private void shortPutSpreadTest() {
 		
-		double[] spreadWidths = { TradeProperties.SPREAD_WIDTH }; 
+		//double[] spreadWidths = { TradeProperties.SPREAD_WIDTH }; 
 		//double[] spreadWidths = { 5, 10, 25, 50 };
 		//double[] spreadWidths = { 1.0, 2.0, 3.0, 5.0, 10 };
+		double[] spreadWidths = { 1.0, 2.0, 3.0, 5.0 };
 		
-		double[] deltas = {TradeProperties.OPEN_DELTA};
-		//double[] deltas = {0.0228, 0.0668, 0.1, 0.1587, 0.2, 0.3};
-		//double[] deltas = {0.1, 0.1587, 0.2, 0.3};
+		//double[] deltas = {TradeProperties.OPEN_DELTA};
+		//double[] deltas = {0.0228, 0.0668, 0.1, 0.1587, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45};
+		//double[] deltas = {0.1, 0.1587, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45};
+		double[] deltas = {0.1, 0.1587, 0.2, 0.25, 0.3};
+		//double[] deltas = {0.0228, 0.0668, 0.1, 0.1587, 0.2, 0.25, 0.3};
+		//double[] deltas = {0.25, 0.35, 0.4, 0.45};
 		//double[] deltas = {0.0228, 0.0668};
 		//double[] deltas = {0.25};
 
-		int[] openDte = {TradeProperties.OPEN_DTE};
-		//int[] openDte = {7, 14, 28, 45};
+		//int[] openDte = {TradeProperties.OPEN_DTE};
+		int[] openDte = {7, 14, 28, 45};
+		//int[] openDte = {7, 14};
+		//int[] openDte = {28, 45};
 		
 		for (int dte :  openDte) {
 			
@@ -271,9 +284,9 @@ public class MainBackTester {
 					    OpenTrade.findShortOptionSpread(tradeDate, expiration, delta, spreadWidth, "P");
 					}
 						
-					CloseTrade.closeTrades(TradeProperties.TRADE_TYPE, 0);
+					CloseTrade.closeTrades(TradeProperties.TRADE_TYPE, spreadWidth);
 					
-					Report.shortSpreadReport(delta, spreadWidth, dte, "Short Put Spread");
+					Report.shortSpreadReport(delta, spreadWidth, dte);
 				}
 			}
 		}

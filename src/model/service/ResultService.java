@@ -1,11 +1,14 @@
 package model.service;
 
+import java.util.Date;
+
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.NoResultException;
 import javax.persistence.Persistence;
 import javax.persistence.Query;
 
+import main.TradeProperties;
 import model.Result;
 
 public class ResultService {
@@ -24,6 +27,8 @@ public class ResultService {
 				+ "and res.width = :width "
 				+ "and res.profitTarget = :profitTarget "
 				+ "and res.stopLoss = :stopLoss "
+				+ "and res.symbol = :symbol "
+				+ "and res.tradeType = :tradeType "
 				);
 		
 		query.setParameter("dte", dte);
@@ -31,6 +36,8 @@ public class ResultService {
 		query.setParameter("width", width);
 		query.setParameter("profitTarget", profitTarget);
 		query.setParameter("stopLoss", stopLoss);
+		query.setParameter("symbol", TradeProperties.SYMBOL);
+		query.setParameter("tradeType", TradeProperties.TRADE_TYPE);
 		
 		//query.setHint("odb.read-only", "true");
 
@@ -65,6 +72,7 @@ public class ResultService {
 			
 			em.getTransaction().begin();
 			result.setMaxDd(400.25);
+			result.setUpdated(new Date());
 			em.merge(result);
 			em.getTransaction().commit();
 		} else {
@@ -74,6 +82,8 @@ public class ResultService {
 			// id = 0 after new
 			result = new Result();
 			
+			result.setSymbol("XYZ");
+			result.setTradeType("SHORT_CALL");
 			result.setDte(7);
 			result.setShortDelta(0.1);
 			result.setWidth(50.0);
@@ -85,6 +95,7 @@ public class ResultService {
 		em.close();
 		emf.close();
 
+		System.out.println("Finished");
 	}
 
 }
