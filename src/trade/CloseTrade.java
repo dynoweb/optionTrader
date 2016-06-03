@@ -11,6 +11,7 @@ import javax.persistence.Persistence;
 import org.joda.time.DateTime;
 
 import main.TradeProperties;
+import main.TradeProperties.TradeType;
 import misc.Utils;
 import model.OptionPricing;
 import model.Trade;
@@ -55,7 +56,7 @@ public class CloseTrade {
 	 *  2 - Hit Stop Loss
 	 *  3 - Hit Exit at DTE Limit
 	 */
-	public static void closeTrades(String tradeType, double spreadWidth) {
+	public static void closeTrades(TradeType tradeType, double spreadWidth) {
 		
 		emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
 		em = emf.createEntityManager();
@@ -302,6 +303,7 @@ public class CloseTrade {
 			
 			if (jTradeDate.equals(jLastTradeDate)) {
 				
+				// TODO may need to determine cost if ITM
 				// perform a time close
 				trade.setClosingCost(Utils.round(- shortOpt.getMean_price() * 100, 2));
 				System.out.println("Time Closing Cost: " + trade.getClosingCost());
@@ -591,13 +593,19 @@ public class CloseTrade {
 			}
 		}
 	}
+	
+	public static boolean isNegative(String field) {
+		
+		return field != null && field.contains("(") ? true : false;
+	}
 
 	/**
 	 * Iterates through the list of open trades, 
 	 */
 	private static void closeTimeExit(double spreadWidth) {
 		
-		if (TradeProperties.TRADE_TYPE.equals("SHORT_CALL") || TradeProperties.TRADE_TYPE.equals("SHORT_PUT")) {
+		if (TradeProperties.tradeType == TradeType.SHORT_CALL || 
+				TradeProperties.tradeType == TradeType.SHORT_PUT) {
 			return;
 		}
 		
@@ -698,61 +706,26 @@ public class CloseTrade {
 			
 			
 			// Close the Short Call
-			if (longCall == null && shortCall != null && longPut == null && shortPut == null) {
-				
-				double fees = TradeProperties.CONTRACTS * 1 * TradeProperties.COST_PER_CONTRACT_FEE;
-				trade.setClosingCost(Utils.round(- shortCall.getMean_price() * 100 + fees, 2));
-				System.out.println("Time Closing Cost: " + trade.getClosingCost());
-				
-				trade.setProfit(Utils.round(trade.getClosingCost() + trade.getOpeningCost(),2));
-				trade.setClose_status(TradeProperties.CLOSE_DTE + " DTE TIME CLOSE");
-				trade.setCloseDate(lastOptionTradedCal.getTime());
-				
-				em.merge(trade);
-				
-				// Save the closing price of the short call in the trade details table
-				recordShortClose(trade, shortCall);
-			}
+//			if (longCall == null && shortCall != null && longPut == null && shortPut == null) {
+//				
+//				double closingCost = calcClosingCost(longCall, shortCall, longPut, shortPut);
+//				
+//				trade.setClosingCost(closingCost);
+//				trade.setProfit(Utils.round(trade.getClosingCost() + trade.getOpeningCost(),2));
+//				trade.setClose_status(TradeProperties.CLOSE_DTE + " DTE TIME CLOSE");
+//				trade.setCloseDate(lastOptionTradedCal.getTime());
+//				
+//				em.merge(trade);
+//				
+//				// Save the closing price of the short call in the trade details table
+//				recordShortClose(trade, shortCall);
+//			}
 
 			
 			// Close the Iron Condor
 			if (longCall != null && shortCall != null && longPut != null && shortPut != null) {
 				
-//				System.out.println("Time Closing Cost: " + (Utils.round(longPut.getMean_price() * 100.0 - shortPut.getMean_price() * 100.0, 2) +
-//						 Utils.round(longCall.getMean_price() * 100.0 - shortCall.getMean_price() * 100.0, 2)) + " for stock price: " + shortPut.getAdjusted_stock_close_price());
-//				
-//				double closingCost = (longPut.getMean_price() - shortPut.getMean_price() +
-//									 longCall.getMean_price() - shortCall.getMean_price()) * 100.0;
-				
-				// ===========================================================================
-				// validate closingCost seems reasonable - cost will be < 0 since it's a debit
-				// ===========================================================================
-				double stockPrice = shortPut.getAdjusted_stock_close_price();
-				
-				double itmPutCost = stockPrice < shortPut.getStrike() ? stockPrice - shortPut.getStrike() : 0.0;
-				if (itmPutCost != 0.0) {
-					double psWidth = longPut.getStrike() - shortPut.getStrike();
-					itmPutCost = Math.max(itmPutCost, psWidth);	// buy back cost
-				}
-				
-				double itmCallCost = shortCall.getStrike() < stockPrice ? shortCall.getStrike() - stockPrice : 0.0;
-				if (itmCallCost != 0) {
-					double csWidth = shortCall.getStrike() - longCall.getStrike();
-					itmCallCost = Math.max(itmCallCost, csWidth);
-				}
-				
-				// assuming closing the entire tested spread
-				double fees = TradeProperties.CONTRACTS * 2 * TradeProperties.COST_PER_CONTRACT_FEE;
-				double closingCost = Utils.round(Math.min(itmPutCost, itmCallCost) * 100 + fees, 2);
-				
-				System.out.println("Time Closing Cost: " + closingCost + " for stock price: " + shortPut.getAdjusted_stock_close_price());
-				
-				// ===========================================================================
-				// end validation
-				// ===========================================================================
-				
-				// Cash settled should only have to pay the spreadwidth to close, but left 2% extra in there to close.
-				//trade.setClosingCost(Utils.round(Math.max(-spreadWidth * 102.0 , closingCost), 2));  
+				double closingCost = calcClosingCost(longCall, shortCall, longPut, shortPut);
 				
 				trade.setClosingCost(closingCost);
 				trade.setProfit(Utils.round(trade.getClosingCost() + trade.getOpeningCost(),2));
@@ -771,25 +744,10 @@ public class CloseTrade {
 			// Close the Short Put Spread
 			if (longCall == null && shortCall == null && longPut != null && shortPut != null) {
 				
-				double stockPrice = shortPut.getAdjusted_stock_close_price();
-				
-				// calculate closing cost if ITM
-				double itmPutCost = stockPrice < shortPut.getStrike() ? stockPrice - shortPut.getStrike() : 0.0;
-				if (itmPutCost != 0.0) {
-					double psWidth = longPut.getStrike() - shortPut.getStrike();
-					itmPutCost = Math.max(itmPutCost, psWidth);	// buy back cost
-				}
-				
-				double cc = 0.0;
-				if (itmPutCost != 0.0) {
-					double fees = TradeProperties.CONTRACTS * 2 * TradeProperties.COST_PER_CONTRACT_FEE;
-					cc = Utils.round(itmPutCost * 100.0 + fees, 2);
-				}
-
-				System.out.println("Time Closing Cost: " + cc);
+				double closingCost = calcClosingCost(longCall, shortCall, longPut, shortPut);
 								
 				// should not be able to close for a credit, it should always cost something or be zero, never a credit
-				trade.setClosingCost(Math.min(0.0, cc));
+				trade.setClosingCost(Math.min(0.0, closingCost));
 				trade.setProfit(Utils.round(trade.getClosingCost() + trade.getOpeningCost(),2));
 				trade.setClose_status(TradeProperties.CLOSE_DTE + " DTE TIME CLOSE");
 				trade.setCloseDate(lastOptionTradedCal.getTime());
@@ -809,23 +767,10 @@ public class CloseTrade {
 				System.out.println("Time Closing Cost: " +  
 													 + Utils.round(longCall.getMean_price(),2) + " - " + Utils.round(shortCall.getMean_price(),2));
 				
-				double stockPrice = shortCall.getAdjusted_stock_close_price();
-				
-				// calculate closing cost if ITM
-				double itmCallCost = stockPrice > shortCall.getStrike() ? shortCall.getStrike() - stockPrice : 0.0;
-				if (itmCallCost != 0.0) {
-					double psWidth = shortCall.getStrike() - longCall.getStrike(); // width expressed as a debt (negative number)
-					itmCallCost = Math.max(itmCallCost, psWidth);	// buy back cost
-				}
-				
-				double cc = 0.0;
-				if (itmCallCost != 0.0) {
-					double fees = TradeProperties.CONTRACTS * 2 * TradeProperties.COST_PER_CONTRACT_FEE;
-					cc = Utils.round(itmCallCost * 100.0 + fees, 2);
-				}
+				double closingCost = calcClosingCost(longCall, shortCall, longPut, shortPut);
 				
 				// should not be able to close for a credit, it should always cost something or be zero, never a credit
-				trade.setClosingCost(Math.min(0.0, cc));
+				trade.setClosingCost(Math.min(0.0, closingCost));
 				trade.setProfit(Utils.round(trade.getClosingCost() + trade.getOpeningCost(),2));
 				trade.setClose_status(TradeProperties.CLOSE_DTE + " DTE TIME CLOSE");
 				trade.setCloseDate(lastOptionTradedCal.getTime());
@@ -873,6 +818,118 @@ public class CloseTrade {
 
 			}
 		}
+	}
+
+	private static double calcClosingCost(Trade trade) {
+
+		OptionPricing longCall = null;
+		OptionPricing shortCall = null;
+		OptionPricing longPut = null;
+		OptionPricing shortPut = null;
+		
+		Calendar lastOptionTradedCal = Calendar.getInstance();
+		Date lastContractTradeDate = OptionPricingService.getLastTradeDateForOption(trade.getExp());
+		lastOptionTradedCal.clear();
+		lastOptionTradedCal.setTime(lastContractTradeDate);		
+		
+		List<TradeDetail> openTradeDetails = TradeDetailService.getTradeDetails(trade);
+
+		double strike = 0;
+		try {
+			for (TradeDetail openTradeDetail : openTradeDetails) {
+
+				strike = openTradeDetail.getStrike();
+				System.out.println("Checking time close on " + Utils.asMMddYY(lastOptionTradedCal.getTime()) + " Expires on " + Utils.asMMddYY(lastOptionTradedCal.getTime()) + " strike: " + strike + " type: " + openTradeDetail.getType());
+
+				if (openTradeDetail.getSide().equals("BUY") && openTradeDetail.getType().equals("CALL")) {
+					longCall = OptionPricingService.getRecord(lastOptionTradedCal.getTime(), trade.getExp(), openTradeDetail.getStrike(), "C");
+				}
+				if (openTradeDetail.getSide().equals("SELL") && openTradeDetail.getType().equals("CALL")) {
+					shortCall = OptionPricingService.getRecord(lastOptionTradedCal.getTime(), trade.getExp(), openTradeDetail.getStrike(), "C");
+				}
+				if (openTradeDetail.getSide().equals("BUY") && openTradeDetail.getType().equals("PUT")) {
+					longPut = OptionPricingService.getRecord(lastOptionTradedCal.getTime(), trade.getExp(), openTradeDetail.getStrike(), "P");
+				}
+				if (openTradeDetail.getSide().equals("SELL") && openTradeDetail.getType().equals("PUT")) {
+					shortPut = OptionPricingService.getRecord(lastOptionTradedCal.getTime(), trade.getExp(), openTradeDetail.getStrike(), "P");
+				}
+				if (openTradeDetail.getType().equals("STOCK")) {
+					TradeDetail longStock = openTradeDetail; 
+				}
+			}
+		} catch (Exception e) {
+			System.out.println("Exception - Checking time close on " + Utils.asMMddYY(lastOptionTradedCal.getTime()) + " Expires on " + Utils.asMMddYY(lastOptionTradedCal.getTime()) + " strike: " + strike);
+			e.printStackTrace();
+			//throw e;
+		}
+				
+		return calcClosingCost(longCall, shortCall, longPut, shortPut);
+	}
+
+	/**
+	 * validate closingCost seems reasonable - cost will be < 0 since it's a debit
+	 * 
+	 * @param longCall
+	 * @param shortCall
+	 * @param longPut
+	 * @param shortPut
+	 * @return
+	 */
+	private static double calcClosingCost(OptionPricing longCall, OptionPricing shortCall, 
+										  OptionPricing longPut, OptionPricing shortPut) {
+		
+		double itmPutCost = 0.0;
+		double itmCallCost = 0.0;		
+		double stockPrice = 0.0;
+		int contractLegs = 0;
+		
+		if (TradeProperties.tradeType == TradeType.SHORT_PUT) {
+			stockPrice = shortPut.getAdjusted_stock_close_price();
+			itmPutCost = stockPrice < shortPut.getStrike() ? stockPrice - shortPut.getStrike() : 0.0;
+			if (itmPutCost != 0.0) {
+				contractLegs = TradeProperties.CONTRACTS * 1;
+			}
+		}
+		
+		if (TradeProperties.tradeType == TradeType.IRON_CONDOR || 
+				TradeProperties.tradeType == TradeType.SHORT_PUT_SPREAD) {
+			
+			stockPrice = shortPut.getAdjusted_stock_close_price();			
+			itmPutCost = stockPrice < shortPut.getStrike() ? stockPrice - shortPut.getStrike() : 0.0;
+			if (itmPutCost != 0.0) {
+				contractLegs = TradeProperties.CONTRACTS * 2;
+				double psWidth = longPut.getStrike() - shortPut.getStrike();
+				itmPutCost = Math.max(itmPutCost, psWidth);	// buy back cost
+			}
+		}
+		
+		if (TradeProperties.tradeType == TradeType.SHORT_CALL) {
+			
+			stockPrice = shortCall.getAdjusted_stock_close_price();			
+			itmCallCost = shortCall.getStrike() < stockPrice ? shortCall.getStrike() - stockPrice : 0.0;
+			if (itmCallCost != 0) {
+				contractLegs = TradeProperties.CONTRACTS * 1;
+			}
+		}
+		
+		if (TradeProperties.tradeType == TradeType.IRON_CONDOR || 
+				TradeProperties.tradeType == TradeType.SHORT_CALL_SPREAD) {
+			
+			stockPrice = shortCall.getAdjusted_stock_close_price();			
+			itmCallCost = shortCall.getStrike() < stockPrice ? shortCall.getStrike() - stockPrice : 0.0;
+			if (itmCallCost != 0) {
+				contractLegs = TradeProperties.CONTRACTS * 2;
+				double csWidth = shortCall.getStrike() - longCall.getStrike();
+				itmCallCost = Math.max(itmCallCost, csWidth);
+			}
+		}
+		
+		double fees = contractLegs * TradeProperties.COST_PER_CONTRACT_FEE;
+		double closingCost = Utils.round(Math.min(itmPutCost, itmCallCost) * 100 + fees, 2);
+		
+		System.out.println("Closing Cost: " + closingCost + " when stock price: " + stockPrice);
+		
+		return closingCost;
 	}
 
 	private static void recordShortClose(Trade trade, OptionPricing shortOption) {

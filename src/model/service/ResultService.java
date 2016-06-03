@@ -37,7 +37,9 @@ public class ResultService {
 		query.setParameter("profitTarget", profitTarget);
 		query.setParameter("stopLoss", stopLoss);
 		query.setParameter("symbol", TradeProperties.SYMBOL);
-		query.setParameter("tradeType", TradeProperties.TRADE_TYPE);
+//		String s1 = TradeProperties.tradeType.getTradeName();
+//		String s2 = TradeProperties.tradeType.name();
+		query.setParameter("tradeType", TradeProperties.tradeType.name());
 		
 		//query.setHint("odb.read-only", "true");
 

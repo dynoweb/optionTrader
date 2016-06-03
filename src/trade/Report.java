@@ -19,6 +19,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Days;
 
 import main.TradeProperties;
+import main.TradeProperties.TradeType;
 import misc.Utils;
 import model.Result;
 import model.Trade;
@@ -132,7 +133,7 @@ public class Report {
 		}
 	}
 	
-	public static void buildIronCondorReport(double shortDelta, double spreadWidth, int dte) {
+	public static void buildIronCondorReport(double shortDelta, double spreadWidth, int dte, double profitTarget, double stopLoss) {
 		
 		List<String> lines = new ArrayList<String>();
 
@@ -185,8 +186,8 @@ public class Report {
 		lines.add("<tbody></TABLE>");
 		lines.add("<br/><h3>Trades: " + numberOfTrades + "</h3>");
 		
-		calculateTradeResults(shortDelta, dte, lines, netProfit, grossRisk, grossCredit, maxDD, numberOfTrades,
-				profitableTrades, daysInTrade, spreadWidth);
+		calculateTradeResults(shortDelta, dte, profitTarget, stopLoss, lines, netProfit, grossRisk, grossCredit, 
+				maxDD, numberOfTrades,	profitableTrades, daysInTrade, spreadWidth);
 		
 		lines.add("<h3>Net Profit: $" + Utils.round(netProfit,2) + "</h3></CENTER>");
 		lines.add("</BODY></HTML>");
@@ -206,7 +207,8 @@ public class Report {
 		}
 	}
 
-	private static void calculateTradeResults(double shortDelta, int dte, List<String> lines, double netProfit,
+	private static void calculateTradeResults(double shortDelta, int dte, double profitTarget, double stopLoss, 
+			List<String> lines, double netProfit,
 			double grossRisk, double grossCredit, double maxDD, int numberOfTrades, int profitableTrades,
 			int daysInTrade, double spreadWidth) {
 		
@@ -222,7 +224,9 @@ public class Report {
 			lines.add("<h3>Avg Profit Per Trade: $" + profitPerTrade + "</h3>");
 			creditPerTrade = Utils.round(grossCredit/numberOfTrades, 2);
 			lines.add("<h3>Avg Credit Per Trade: " + creditPerTrade + "</h3>");
-			avgReturnPerTrade = Utils.round(100.0 * netProfit/grossRisk, 2);
+			if (grossRisk != 0) {
+				avgReturnPerTrade = Utils.round(100.0 * netProfit/grossRisk, 2);
+			} 
 			lines.add("<h3>Avg Return Per Trade: " + avgReturnPerTrade + "%</h3>");
 			profitPerDay = Utils.round(netProfit/daysInTrade, 2);
 			lines.add("<h3>Profit Per Day: $" + profitPerDay + "</h3>");
@@ -233,19 +237,20 @@ public class Report {
 			lines.add("<h3>        Max Drawdown: $" + Utils.round(maxDD, 2) + "</h3>");
 		}		
 
-		captureResults(shortDelta, spreadWidth, dte, netProfit, maxDD, numberOfTrades, avgDaysInTrade,
-				avgReturnPerTrade, creditPerTrade, percentProfitable, profitPerDay, profitPerTrade);
+		captureResults(shortDelta, spreadWidth, dte, profitTarget, stopLoss, 
+				netProfit, maxDD, numberOfTrades, avgDaysInTrade, avgReturnPerTrade, 
+				creditPerTrade, percentProfitable, profitPerDay, profitPerTrade);
 	}
 
-	private static void captureResults(double shortDelta, double spreadWidth, int dte, double netProfit, double maxDD,
-			int numberOfTrades, double avgDaysInTrade, double avgReturnPerTrade, double creditPerTrade,
-			double percentProfitable, double profitPerDay, double profitPerTrade) {
+	private static void captureResults(double shortDelta, double spreadWidth, int dte, double profitTarget, double stopLoss, 
+			double netProfit, double maxDD,	int numberOfTrades, double avgDaysInTrade, double avgReturnPerTrade, 
+			double creditPerTrade,	double percentProfitable, double profitPerDay, double profitPerTrade) {
 		
 		emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
 		em = emf.createEntityManager();
 		em.getTransaction().begin();		
 
-		Result result = ResultService.getRecord(dte, shortDelta, spreadWidth, 0.0, 0.0);
+		Result result = ResultService.getRecord(dte, shortDelta, spreadWidth, profitTarget, stopLoss);
 		if (result == null) {
 		 	result = new Result();
 		}
@@ -258,13 +263,15 @@ public class Report {
 		result.setProfitable(percentProfitable);
 		result.setProfitPerDay(profitPerDay);
 		result.setProfitPerTrade(profitPerTrade);
-		result.setProfitTarget(0.0);
+		result.setProfitTarget(profitTarget);
 		result.setReturnPerTrade(avgReturnPerTrade);
 		result.setShortDelta(shortDelta);
-		result.setStopLoss(0.0);
+		result.setStopLoss(stopLoss);
 		result.setSymbol(TradeProperties.SYMBOL);
 		result.setTrades(numberOfTrades);
-		result.setTradeType(TradeProperties.TRADE_TYPE);
+//		String s1 = TradeProperties.tradeType.getTradeName();
+//		String s2 = TradeProperties.tradeType.name();
+		result.setTradeType(TradeProperties.tradeType.name());
 		result.setWidth(spreadWidth);
 		result.setUpdated(new Date());
 
@@ -291,7 +298,7 @@ public class Report {
 		}
 	}
 
-	public static void shortSpreadReport(double shortDelta, double spreadWidth, int dte) {
+	public static void shortSpreadReport(double shortDelta, double spreadWidth, int dte, double profitTarget, double stopLoss) {
 		
 		List<String> lines = new ArrayList<String>();
 
@@ -307,7 +314,7 @@ public class Report {
 		int profitableTrades = 0;
 		int daysInTrade = 0;
 
-		String tradeType = TradeProperties.TRADE_TYPE.equals("SHORT_PUT_SPREAD") ? "Short Put Spread" : "Short Call Spread";
+		String tradeType = TradeProperties.tradeType == TradeType.SHORT_PUT_SPREAD ? "Short Put Spread" : "Short Call Spread";
 		lines.add("<H3>"+ TradeProperties.SYMBOL + " - " + tradeType + "</H3>");
 		lines.add("<H3>" + " Short Delta: " + shortDelta + ", Days To Expiration: " + dte + ", width: " + spreadWidth + "</H3>");
 		lines.add("<H3>Profit Target: " + (TradeProperties.PROFIT_TARGET * 100) + "%, Max Loss: " + (TradeProperties.MAX_LOSS * 100) + "%, Close at: " + TradeProperties.CLOSE_DTE + " DTE</H3>");		
@@ -350,7 +357,7 @@ public class Report {
 		lines.add("<tbody></TABLE>");
 		lines.add("<br/><h3>Trades: " + numberOfTrades + "</h3>");
 
-		calculateTradeResults(shortDelta, dte, lines, netProfit, grossRisk, grossCredit, maxDD, numberOfTrades,
+		calculateTradeResults(shortDelta, dte, profitTarget, stopLoss, lines, netProfit, grossRisk, grossCredit, maxDD, numberOfTrades,
 				profitableTrades, daysInTrade, spreadWidth);
 		
 		lines.add("<h3>Net Profit: $" + Utils.round(netProfit,2) + "</h3></CENTER>");
@@ -372,7 +379,7 @@ public class Report {
 		}
 	}
 
-	public static void shortOptionReport(double shortDelta, int dte, double profitTarget) {
+	public static void shortOptionReport(double shortDelta, int dte, double profitTarget, double stopLoss) {
 
 		List<String> lines = new ArrayList<String>();
 
@@ -381,7 +388,7 @@ public class Report {
 		double spreadWidth = 0;		// for spreads, this is passed into the method
 
 		double netProfit = 0.0;
-		double grossRisk = 0.0;
+		double grossRisk = 0.0;	
 		double grossCredit = 0.0;	// not used for unlimited risk trades	
 		double maxProfit = Double.MIN_VALUE;;
 		double maxDD = 0.0;
@@ -390,7 +397,7 @@ public class Report {
 		int profitableTrades = 0;
 		int daysInTrade = 0;
 
-		String tradeType = TradeProperties.TRADE_TYPE.equals("SHORT_CALL") ? "Short Call" : "Short Put";
+		String tradeType = TradeProperties.tradeType == TradeType.SHORT_CALL ? "Short Call" : "Short Put";
 		lines.add("<H3>" + tradeType + " - "+ TradeProperties.SYMBOL + "</H3>");
 		lines.add("<H3>" + " Short Delta: " + shortDelta + " Days To Expiration: " + dte + "</H3>");
 		lines.add("<H3>Profit Target: " + (profitTarget * 100) + "%, Max Loss: " + (TradeProperties.MAX_LOSS * 100) + "%, Close at: " + TradeProperties.CLOSE_DTE + " DTE</H3>");		
@@ -429,13 +436,13 @@ public class Report {
 		lines.add("<tbody></TABLE>");
 		lines.add("<br/><h3>Trades: " + numberOfTrades + "</h3>");
 
-		calculateTradeResults(shortDelta, dte, lines, netProfit, grossRisk, grossCredit, maxDD, numberOfTrades,
+		calculateTradeResults(shortDelta, dte, profitTarget, stopLoss, lines, netProfit, grossRisk, grossCredit, maxDD, numberOfTrades,
 				profitableTrades, daysInTrade, spreadWidth);
 
 		lines.add("<h3>Net Profit: $" + Utils.round(netProfit,2) + "</h3></CENTER>");
 		lines.add("</BODY></HTML>");
 		
-		String fileNamePrefix = TradeProperties.TRADE_TYPE.equals("SHORT_CALL") ? "SC_" : "SP_";
+		String fileNamePrefix = TradeProperties.tradeType == TradeType.SHORT_CALL ? "SC_" : "SP_";
 		String outFileName = reportFolder + fileNamePrefix + TradeProperties.SYMBOL 
 				+ "_D_" + shortDelta 
 				+ "_DTE_" + dte 

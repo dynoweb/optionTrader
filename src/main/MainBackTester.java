@@ -6,6 +6,7 @@ import java.util.Map;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
+import main.TradeProperties.TradeType;
 import trade.CloseTrade;
 import trade.CoveredStraddle;
 import trade.OpenTrade;
@@ -33,30 +34,30 @@ public class MainBackTester {
 		
 		DateTime start = new DateTime();
 		
-		switch (TradeProperties.TRADE_TYPE) {
-		case "COVERED_CALL":
+		switch (TradeProperties.tradeType) {
+		case COVERED_CALL:
 			bt.coveredCallBackTest();
 			break;
-		case "COVERED_STRADDLE":
+		case COVERED_STRADDLE:
 			bt.coveredStraddleBackTest();
 			break;
-		case "IRON_CONDOR":
+		case IRON_CONDOR:
 			bt.ironCondorBackTest();
 			break;
-		case "SHORT_CALL_SPREAD":
+		case SHORT_CALL_SPREAD:
 			bt.shortCallSpreadTest();
 			break;
-		case "SHORT_PUT_SPREAD":
+		case SHORT_PUT_SPREAD:
 			bt.shortPutSpreadTest();
 			break;
-		case "SHORT_CALL":
+		case SHORT_CALL:
 			bt.shortCallBackTest();
 			break;
-		case "SHORT_PUT":
+		case SHORT_PUT:
 			bt.shortPutBackTest();
 			break;
 		default:
-			System.err.println("Unknown trade type: " + TradeProperties.TRADE_TYPE);
+			System.err.println("Unknown trade type: " + TradeProperties.tradeType);
 			break;
 		}
 		
@@ -69,13 +70,13 @@ public class MainBackTester {
 		
 		//double[] spreadWidths = { TradeProperties.SPREAD_WIDTH }; 
 		//double[] spreadWidths = { 5, 10, 25, 50 };
-		//double[] spreadWidths = { 1.0, 2.0, 3.0, 5.0, 10 };
 		double[] spreadWidths = { 1.0, 2.0, 3.0, 5.0, 10.0 };
+		//double[] spreadWidths = { 10, 20, 50 };				// good for RUT
 		
 		//double[] deltas = {TradeProperties.OPEN_DELTA};
 		//double[] deltas = {0.0228, 0.0668, 0.1, 0.1587, 0.2, 0.3, 0.35, 0.4, 0.45};
 		//double[] deltas = {0.1, 0.1587, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45};
-		double[] deltas = {0.1, 0.1587, 0.2};
+		double[] deltas = {0.0228, 0.0668, 0.1, 0.1587, 0.2, 0.25};
 		//double[] deltas = {0.4, 0.45};
 		//double[] deltas = {0.0228, 0.0668};
 		
@@ -108,8 +109,8 @@ public class MainBackTester {
 					    OpenTrade.findIronCondorChains(tradeDate, expiration, delta, spreadWidth);
 					}
 					
-					CloseTrade.closeTrades(TradeProperties.TRADE_TYPE, spreadWidth);
-					Report.buildIronCondorReport(delta, spreadWidth, dte);
+					CloseTrade.closeTrades(TradeProperties.tradeType, spreadWidth);
+					Report.buildIronCondorReport(delta, spreadWidth, dte, TradeProperties.PROFIT_TARGET, TradeProperties.MAX_LOSS);
 				}
 			}
 		}
@@ -148,7 +149,7 @@ public class MainBackTester {
 				}
 				System.out.println("================= All trades opened - checking closing trade =================");
 				
-				CloseTrade.closeTrades(TradeProperties.TRADE_TYPE, 0);
+				CloseTrade.closeTrades(TradeProperties.tradeType, 0);
 				
 				Report.buildCoveredCallReport(delta, dte);
 			}
@@ -192,7 +193,7 @@ public class MainBackTester {
 			CoveredCallTradeManager tm = new CoveredCallTradeManager(coveredStraddle, expirations, dte, initialDelta);
 			tm.manageTrade();
 			
-			CloseTrade.closeTrades(TradeProperties.TRADE_TYPE, 0);
+			CloseTrade.closeTrades(TradeProperties.tradeType, 0);
 			
 			Report.buildCoveredStraddleReport(dte);
 		}
@@ -203,19 +204,20 @@ public class MainBackTester {
 
 	private void shortCallSpreadTest() {
 		
-		double[] spreadWidths = { TradeProperties.SPREAD_WIDTH }; 
-		//double[] spreadWidths = { 5, 10, 25, 50 };
-		//double[] spreadWidths = { 1.0, 2.0, 3.0, 5.0 };
+		//double[] spreadWidths = { TradeProperties.SPREAD_WIDTH }; 
+		//double[] spreadWidths = { 5, 10, 25, 50 };	    // good for SPX
+		double[] spreadWidths = { 1.0, 2.0, 3.0, 5.0 };	// good for SPY
 		//double[] spreadWidths = { 1.0, 2.0, 3.0 };
+		//double[] spreadWidths = { 10, 20, 50 };				// good for RUT
 		
-		double[] deltas = {TradeProperties.OPEN_DELTA};
+		//double[] deltas = {TradeProperties.OPEN_DELTA};
 		//double[] deltas = {0.0228, 0.0668, 0.1, 0.1587, 0.2, 0.3};
-		//double[] deltas = {0.1, 0.1587, 0.2, 0.3};
+		double[] deltas = {0.1, 0.1587, 0.2, 0.3};
 		//double[] deltas = {0.0228, 0.0668};
 		//double[] deltas = {0.25};
 
-		int[] openDte = {TradeProperties.OPEN_DTE};
-		//int[] openDte = {7, 14, 28, 45};
+		//int[] openDte = {TradeProperties.OPEN_DTE};
+		int[] openDte = {7, 14, 28, 45};
 		//int[] openDte = {7, 14};
 		//int[] openDte = {28, 45};
 		
@@ -236,8 +238,8 @@ public class MainBackTester {
 					    System.out.println("checking: tradeDate: "  + Utils.asMMMddYYYY(tradeDate) + " expiration: " + Utils.asMMMddYYYY(expiration));
 					    OpenTrade.findShortOptionSpread(tradeDate, expiration, delta, spreadWidth, "C");
 					}
-					CloseTrade.closeTrades(TradeProperties.TRADE_TYPE, 0);
-					Report.shortSpreadReport(delta, spreadWidth, dte);
+					CloseTrade.closeTrades(TradeProperties.tradeType, 0);
+					Report.shortSpreadReport(delta, spreadWidth, dte, TradeProperties.PROFIT_TARGET, TradeProperties.MAX_LOSS);
 				}
 			}
 		}
@@ -249,13 +251,14 @@ public class MainBackTester {
 		
 		//double[] spreadWidths = { TradeProperties.SPREAD_WIDTH }; 
 		//double[] spreadWidths = { 5, 10, 25, 50 };
-		//double[] spreadWidths = { 1.0, 2.0, 3.0, 5.0, 10 };
-		double[] spreadWidths = { 1.0, 2.0, 3.0, 5.0 };
+		double[] spreadWidths = { 1.0, 2.0, 3.0, 5.0, 10 };
+		//double[] spreadWidths = { 1.0, 2.0, 3.0, 5.0 };
+		//double[] spreadWidths = { 10, 20, 50 };				// good for RUT
 		
 		//double[] deltas = {TradeProperties.OPEN_DELTA};
 		//double[] deltas = {0.0228, 0.0668, 0.1, 0.1587, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45};
 		//double[] deltas = {0.1, 0.1587, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45};
-		double[] deltas = {0.1, 0.1587, 0.2, 0.25, 0.3};
+		double[] deltas = {0.0668, 0.1, 0.1587, 0.2, 0.25, 0.3};
 		//double[] deltas = {0.0228, 0.0668, 0.1, 0.1587, 0.2, 0.25, 0.3};
 		//double[] deltas = {0.25, 0.35, 0.4, 0.45};
 		//double[] deltas = {0.0228, 0.0668};
@@ -284,9 +287,9 @@ public class MainBackTester {
 					    OpenTrade.findShortOptionSpread(tradeDate, expiration, delta, spreadWidth, "P");
 					}
 						
-					CloseTrade.closeTrades(TradeProperties.TRADE_TYPE, spreadWidth);
+					CloseTrade.closeTrades(TradeProperties.tradeType, spreadWidth);
 					
-					Report.shortSpreadReport(delta, spreadWidth, dte);
+					Report.shortSpreadReport(delta, spreadWidth, dte, TradeProperties.PROFIT_TARGET, TradeProperties.MAX_LOSS);
 				}
 			}
 		}
@@ -296,19 +299,20 @@ public class MainBackTester {
 
 	private void shortCallBackTest() {
 
-		double[] deltas = {TradeProperties.OPEN_DELTA};
+		//double[] deltas = {TradeProperties.OPEN_DELTA};
 		//double[] deltas = {0.0228, 0.0668, 0.1, 0.1587, 0.2, 0.3}; 
+		double[] deltas = {0.1, 0.1587, 0.2, 0.3}; 
 		//double[] deltas = {0.0228, 0.0668};
-		//double[] deltas = {0.0228, 0.0668, 0.1, 0.1587, 0.2, 0.3};
 		//double[] deltas = {0.25};
 		
-		int[] openDte = {TradeProperties.OPEN_DTE};
-		//int[] openDte = {7, 14, 28, 45};
+		//int[] openDte = {TradeProperties.OPEN_DTE};
+		int[] openDte = {7, 14, 28, 45};
 		
-		double[] profitTargets = {TradeProperties.PROFIT_TARGET};
+		//double[] profitTargets = {TradeProperties.PROFIT_TARGET};
 		//double[] profitTargets = {0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9}; 
-		//double[] profitTargets = {0.2, 0.4, 0.6, 0.8};
+		//double[] profitTargets = {0.3, 0.4, 0.5, 0.6, 0.7};
 		//double[] profitTargets = {0.1, 0.3, 0.5, 0.7, 0.9};
+		double[] profitTargets = {0.0, 0.5};		
 		
 		for (int dte :  openDte) {
 			
@@ -330,7 +334,7 @@ public class MainBackTester {
 						
 					CloseTrade.closeTrades(profitTarget);
 					
-					Report.shortOptionReport(delta, dte, profitTarget);
+					Report.shortOptionReport(delta, dte, profitTarget, TradeProperties.MAX_LOSS);
 				}
 			}
 		}
@@ -340,19 +344,20 @@ public class MainBackTester {
 
 	private void shortPutBackTest() {
 
-		double[] deltas = {TradeProperties.OPEN_DELTA};
+		//double[] deltas = {TradeProperties.OPEN_DELTA};
 		//double[] deltas = {0.0228, 0.0668, 0.1, 0.1587, 0.2, 0.3}; 
-		//double[] deltas = {0.1, 0.1587, 0.2, 0.3}; 
+		double[] deltas = {0.1, 0.1587, 0.2, 0.3}; 
 		//double[] deltas = {0.0228, 0.0668};
 		//double[] deltas = {0.25};
 		
 		//int[] openDte = {TradeProperties.OPEN_DTE};
 		int[] openDte = {7, 14, 28, 45};
 		
-		double[] profitTargets = {TradeProperties.PROFIT_TARGET};
+		//double[] profitTargets = {TradeProperties.PROFIT_TARGET};
 		//double[] profitTargets = {0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9}; 
 		//double[] profitTargets = {0.3, 0.4, 0.5, 0.6, 0.7};
 		//double[] profitTargets = {0.1, 0.3, 0.5, 0.7, 0.9};
+		double[] profitTargets = {0.0, 0.5};
 		
 		for (int dte :  openDte) {
 			
@@ -374,7 +379,7 @@ public class MainBackTester {
 						
 					CloseTrade.closeTrades(profitTarget);
 					
-					Report.shortOptionReport(delta, dte, profitTarget);
+					Report.shortOptionReport(delta, dte, profitTarget, TradeProperties.MAX_LOSS);
 				}
 			}
 		}
