@@ -184,7 +184,8 @@ public class OptionPricingService {
 		return optionPriceRecord;
 	}
 
-	public List<Date> getExpirationsForTradeDate(Date tradeDate) {
+
+	public static List<Date> getExpirationsForTradeDate(Date tradeDate) {
 
 		EntityManagerFactory emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
 		EntityManager em = emf.createEntityManager();
@@ -305,6 +306,35 @@ public class OptionPricingService {
 		em.close();
 		
 		return options;
+	}
+
+	/**
+	 * Get option chain for a trade start date until expiration at strike and callPutType.
+	 * 
+	 * @param startingTradeDate
+	 * @param expiration
+	 * @param strike
+	 * @param callPut
+	 * @return
+	 */
+	public static List<Date> getTradeDays() {
+		
+		EntityManagerFactory emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
+		EntityManager em = emf.createEntityManager();
+		
+		// Note: table name refers to the Entity Class and is case sensitive
+		//       field names are property names in the Entity Class
+		Query query = em.createQuery("select distinct(opt.trade_date) from " + TradeProperties.SYMBOL_FOR_QUERY + " opt "
+				+ " order by opt.trade_date");
+		
+		query.setHint("odb.read-only", "true");
+
+		@SuppressWarnings("unchecked")
+		List<Date> tradeDates = query.getResultList();
+		
+		em.close();
+		
+		return tradeDates;
 	}
 
 

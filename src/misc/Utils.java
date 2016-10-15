@@ -144,7 +144,7 @@ public class Utils {
 	public static List<Date> getMonthlyExpirations() {
 		
 		ExpirationService es = new ExpirationService(); 		
-		return es.getPotentialMonthlyExpirations();
+		return es.getMonthlyExpirations();
 	}
 	
 	public static List<Date> getWeeklyExpirations() {

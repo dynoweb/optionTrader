@@ -4,6 +4,8 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
+import org.joda.time.DateTime;
+
 import misc.Utils;
 import model.OptionPricing;
 import model.Trade;
@@ -217,6 +219,49 @@ public class OpenTrade {
 //	}
 
 
+	private static OptionPricing getOptionAtStrike(Date tradeDate, Date expiration, Double strike, String callPut) {
+
+		OptionPricing option = null;
+		
+		OptionPricingService ops = new OptionPricingService();
+		List<OptionPricing> optChain = ops.getOptionChain(tradeDate, expiration, callPut);
+		
+	    if (!optChain.isEmpty()) {
+			for (OptionPricing optionPrice : optChain) {
+				if (optionPrice.getStrike() == strike) {
+					option = optionPrice;
+					break;
+				}
+			}
+	    } else {
+	    	System.err.println("Option chain is empty for tradeDate: " + tradeDate + " and expiration: " + expiration);
+	    }
+	    return option;
+	}
+
+	private static OptionPricing getAtmShort(Date tradeDate, Date expiration, String callPut) {
+
+		OptionPricing shortOpt = null;
+		
+		OptionPricingService ops = new OptionPricingService();
+		List<OptionPricing> optChain = ops.getOptionChain(tradeDate, expiration, callPut);
+		
+	    if (!optChain.isEmpty()) {
+			for (OptionPricing option : optChain) {
+				if (option.getStrike() > option.getAdjusted_stock_close_price()) {
+					shortOpt = option;
+				} else {
+					break;
+				}
+			}
+			// write the opening Trade and TradeDetails to the database
+			//TradeService.recordShort(shortOpt);
+	    } else {
+	    	System.err.println("Option chain is empty for tradeDate: " + tradeDate + " and expiration: " + expiration);
+	    }
+	    return shortOpt;
+	}
+
 	public static void findShort(Date tradeDate, Date expiration, double delta, String callPut) {
 
 		OptionPricingService ops = new OptionPricingService();
@@ -372,7 +417,7 @@ public class OpenTrade {
 			
 			// Search for long leap option
 			List<Date> monthlys = Utils.getMonthlyExpirations();
-			List<Date> expirationsAtTradeDate = ops.getExpirationsForTradeDate(tradeDate);
+			List<Date> expirationsAtTradeDate = OptionPricingService.getExpirationsForTradeDate(tradeDate);
 
 			// finding the leap expiration, the last one should be the leap
 			for (Date expireDate : expirationsAtTradeDate) {
@@ -422,19 +467,87 @@ public class OpenTrade {
 		return coveredStraddle;
 	}
 
+	/**
+	 * Finds trade details for a calendar trade.  This will be different from other OpenTrades since 
+	 * it will be opening trade daily to get test instances.
+	 * @param expirationList
+	 */
+	public static void openCalendar() {
+
+		boolean useWeekly = false;
+
+		List<Date> expirationList = null;
+		
+		if (useWeekly) {
+			expirationList = Utils.getExpirations();
+		} else {
+			expirationList = Utils.getMonthlyExpirations();
+		}
+
+		Date[] expirations = expirationList.toArray(new Date[expirationList.size()]);
+		
+		List<Date> tradeDays = OptionPricingService.getTradeDays();
+
+		// for now, let's do the 45 DTE and the next month
+		for (Date tradeDate : tradeDays) {
+			
+			Date longExpiration = null;
+			Date shortExpiration = null;
+
+			// find short date
+			// from JDK to Joda
+			DateTime jOpenDate = new DateTime(tradeDate);
+			DateTime jShortExpDateStart = new DateTime(jOpenDate.plusDays(31)); 
+			DateTime jShortExpDateEnd = new DateTime(jOpenDate.plusDays(59));
+			
+			// TODO - TRADE FILTER - remove me to clear filter, this is here to make it run faster
+//			if (jOpenDate.getYear() != 2015) { // || jOpenDate.getMonthOfYear() == 18) { // || jOpenDate.getDayOfMonth() != 22) {
+//				continue;
+//			}
+			
+			// find short expiration
+			for (int i = 0; i < expirations.length; i++) {
+				DateTime jExp = new DateTime(expirations[i]);
+				if (jExp.isAfter(jShortExpDateStart) && jExp.isBefore(jShortExpDateEnd)) {
+					shortExpiration = jExp.toDate();
+					// TODO do this better than this, it could still be assigning the wrong date to the out leg, should also consider handling different intervals
+					if (jExp.plusDays(20).isAfter(new DateTime(expirations[i+1]))) {						
+						// hopefully this is long enough
+						longExpiration = expirations[i+2];
+					} else {
+						longExpiration = expirations[i+1];
+					}
+					break;
+				}
+			}
+			
+			if (shortExpiration != null && longExpiration != null) {				
+				OptionPricing shortOption = OpenTrade.getAtmShort(tradeDate, shortExpiration, "P");
+				
+				if (shortOption != null) {
+					System.out.println("Opening Calendar on:" + Utils.asMMddYY(tradeDate) + " strike:" + shortOption.getStrike() 
+							+ "  nearExpiry:" + Utils.asMMddYY(shortExpiration) + " farExpiry:" + Utils.asMMddYY(longExpiration));
+					
+					OptionPricing longOption = OpenTrade.getOptionAtStrike(tradeDate, longExpiration, shortOption.getStrike(), "P");
+			    				
+					if (longOption != null) {
+						CalendarSpread calendarSpread = new CalendarSpread();
+						calendarSpread.setShortOptionOpen(shortOption);
+						calendarSpread.setLongOptionOpen(longOption);
+						
+				    	TradeService.recordCalendarSpread(calendarSpread);
+					}
+				}
+			}
+		}
+		
+		
+	}
+
 	private static VerticalSpread openCallSpread(List<OptionPricing> callChain, double openDelta, double spreadWidth) {
 		
 		// find short call at delta
 		OptionPricing shortCall = findOptionAtDelta(callChain, openDelta);
-//		double smallestDiff = 1.0;
-//		for (OptionPricing call : callChain) {
-//			
-//			double diffFromDelta = Math.abs(openDelta - call.getDelta());
-//			if (diffFromDelta < smallestDiff) {
-//				shortCall = call;
-//				smallestDiff = diffFromDelta;
-//			}
-//		}
 		
 		// get long call
 		double longStrike = shortCall.getStrike() + spreadWidth;
@@ -447,27 +560,13 @@ public class OpenTrade {
 			}
 		}
 
-//		if (longCall == null) {
-//			OptionPricing longCallCandidate = null;
-//			System.err.println("Could not pair up short call with a long call");
-//			double diff = 1000;
-//			for (OptionPricing call : callChain) {
-//				if (call.getStrike() > longStrike) {	// make sure we are building a debit spread
-//					if (diff > call.getStrike() - longStrike) {
-//						longCallCandidate = call;
-//						diff = call.getStrike() - longStrike;
-//					}
-//				}				
-//			}
-//			longCall = longCallCandidate;		// use the next strike available
-//		}
-		
 		VerticalSpread callSpread = new VerticalSpread();
 		callSpread.setLongOptionOpen(longCall);
 		callSpread.setShortOptionOpen(shortCall);
 
 		return callSpread;
 	}
+
 
 	public static void openIronCondor(List<OptionPricing> callChain, List<OptionPricing> putChain, double openDelta, double spreadWidth) {
 		

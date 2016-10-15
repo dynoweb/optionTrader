@@ -5,7 +5,7 @@ public class TradeProperties {
 	public enum TradeType {
 		COVERED_CALL("Covered Call"), COVERED_STRADDLE("Covered Straddle"), IRON_CONDOR("Iron Condor"), 
 		SHORT_CALL_SPREAD("Short Call Spread"), SHORT_PUT_SPREAD("Short Put Spread"), 
-		SHORT_CALL("Short Call"), SHORT_PUT("Short Put"), CALENDAR("Calendar"), ;
+		SHORT_CALL("Short Call"), SHORT_PUT("Short Put"), CALENDAR("Calendar") ;
 		
 		private String tradeName;
 		
@@ -22,17 +22,7 @@ public class TradeProperties {
 		}
 	}
 
-//	public static final int COVERED_CALL = 1;
-//	public static final int COVERED_STRADDLE = 2;
-//	public static final int IRON_CONDOR = 3;
-//	public static final int SHORT_CALL_SPREAD = 4;
-//	public static final int SHORT_PUT_SPREAD = 5;
-//	public static final int SHORT_CALL = 6;
-//	public static final int SHORT_PUT = 7;
-	
-	// ["COVERED_CALL", "COVERED_STRADDLE", "IRON_CONDOR" 
-	// "SHORT_CALL_SPREAD", "SHORT_PUT_SPREAD", "SHORT_CALL", "SHORT_PUT"]
-	public static TradeType tradeType = TradeType.SHORT_CALL;  
+	public static TradeType tradeType = TradeType.SHORT_PUT_SPREAD;  
 	
 //	public static final String SYMBOL = "EEM";
 //	public static final String SYMBOL = "GLD";
@@ -57,13 +47,13 @@ public class TradeProperties {
 	// Delta = 0.0228 - 2 SD
 	//
 	// Open trade properties
-	public static double OPEN_DELTA = 0.1587;
-	public static int OPEN_DTE = 45;
-	public static double SPREAD_WIDTH = 5.0;
+	public static double OPEN_DELTA = 0.25;
+	public static int OPEN_DTE = 7;
+	public static double SPREAD_WIDTH = 100.0;
 	
 	// Close trade properties
 	public static double PROFIT_TARGET = 0.0;  // 0.50 - 50% of max potential
-	public static double MAX_LOSS = 0.0;  // 2.0 - 200%
-	public static int CLOSE_DTE = 0;	// 8 is the default
+	public static double MAX_LOSS = 0;  // 2.0 - 200%
+	public static int CLOSE_DTE = 0;	// 1 is the default
 	public static double CLOSE_DELTA_TARGET = 0.0;
 }

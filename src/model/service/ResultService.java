@@ -14,7 +14,7 @@ import model.Result;
 public class ResultService {
 
 	
-	public static Result getRecord(int dte, double shortDelta, double width, double profitTarget, double stopLoss) {
+	public static Result getRecord(int dte, double shortDelta, double width, double profitTarget, double stopLoss, int closeDte) {
 		
 		EntityManagerFactory emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
 		EntityManager em = emf.createEntityManager();
@@ -27,6 +27,7 @@ public class ResultService {
 				+ "and res.width = :width "
 				+ "and res.profitTarget = :profitTarget "
 				+ "and res.stopLoss = :stopLoss "
+				+ "and res.closeDte = :closeDte "
 				+ "and res.symbol = :symbol "
 				+ "and res.tradeType = :tradeType "
 				);
@@ -36,6 +37,7 @@ public class ResultService {
 		query.setParameter("width", width);
 		query.setParameter("profitTarget", profitTarget);
 		query.setParameter("stopLoss", stopLoss);
+		query.setParameter("closeDte", closeDte);
 		query.setParameter("symbol", TradeProperties.SYMBOL);
 //		String s1 = TradeProperties.tradeType.getTradeName();
 //		String s2 = TradeProperties.tradeType.name();
@@ -49,7 +51,7 @@ public class ResultService {
 		} catch (NoResultException ignore) {
 		} catch  (Exception ex) {
 			System.err.println(ex.getMessage());
-			System.err.println(" dte: " + dte + " shortDelta: " + shortDelta + " width: " + width + " profitTarget: " + profitTarget + " stopLoss: " + stopLoss);
+			System.err.println(" dte: " + dte + " shortDelta: " + shortDelta + " width: " + width + " profitTarget: " + profitTarget + " stopLoss: " + stopLoss + " closeDte: " + closeDte);
 			ex.printStackTrace();
 			throw ex;
 		}
@@ -66,7 +68,7 @@ public class ResultService {
 		emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
 		em = emf.createEntityManager();
 		
-		Result result = ResultService.getRecord(7, 0.1, 50.0, 0.0, 0.0);
+		Result result = ResultService.getRecord(7, 0.1, 50.0, 0.0, 0.0, 0);
 		
 		if (result != null) {
 			// test edit

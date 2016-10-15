@@ -7,6 +7,7 @@ import javax.persistence.EntityManagerFactory;
 import javax.persistence.Persistence;
 import javax.persistence.Query;
 
+import trade.CalendarSpread;
 import trade.CoveredStraddle;
 import trade.IronCondor;
 import trade.VerticalSpread;
@@ -271,6 +272,11 @@ public class TradeService {
 		emf.close();
 	}
 	
+	/**
+	 * Records a trade record and a single option position in the tradeDetails table.
+	 * 
+	 * @param shortOption call or put
+	 */
 	public static void recordShort(OptionPricing shortOption) {
 		
 		Trade trade = new Trade();
@@ -371,7 +377,49 @@ public class TradeService {
 		
 		trade.setExecTime(shortOpt.getExecTime());
 		trade.setExp(shortOpt.getExp());
-		trade.setTradeType("SHORT " + shortOpt.getTrade() + " SPREAD");
+		trade.setTradeType("SHORT " + shortOpt.getType() + " SPREAD");
+		trade.setClose_status("OPEN");
+		
+		double fees = contracts * 2 * TradeProperties.COST_PER_CONTRACT_FEE;
+		double openingCost = Utils.round(shortOpt.getPrice() * 100 + 
+										  longOpt.getPrice() * 100 + fees, 2);
+		trade.setOpeningCost(openingCost);
+
+		EntityManagerFactory emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
+		EntityManager em = emf.createEntityManager();
+		
+		em.getTransaction().begin();		
+		em.persist(trade);
+		
+		shortOpt.setTrade(trade);
+		em.persist(shortOpt);
+		
+		longOpt.setTrade(trade);
+		em.persist(longOpt);
+		
+		em.getTransaction().commit();
+		em.close();
+		emf.close();
+	}
+
+	public static void recordCalendarSpread(CalendarSpread calendarSpread) {
+		
+		Trade trade = new Trade();
+		int contracts = TradeProperties.CONTRACTS;
+		
+		TradeDetail shortOpt = null;
+		TradeDetail longOpt = null;
+    	try {
+			shortOpt = initializeTradeDetail(calendarSpread.getShortOptionOpen(), -contracts, "OPENING", "SELL");
+    		longOpt = initializeTradeDetail(calendarSpread.getLongOptionOpen(), contracts, "OPENING", "BUY");
+    	} catch (Exception ex) {
+    		ex.printStackTrace();
+    		throw ex;
+    	}
+		
+		trade.setExecTime(shortOpt.getExecTime());
+		trade.setExp(shortOpt.getExp());
+		trade.setTradeType("CALENDAR");
 		trade.setClose_status("OPEN");
 		
 		double fees = contracts * 2 * TradeProperties.COST_PER_CONTRACT_FEE;

@@ -21,6 +21,9 @@ public class Result implements Serializable {
 
 	@Column(name="avg_days_in_trade")
 	private double avgDaysInTrade;
+	
+	@Column(name="close_dte")
+	private int closeDte;
 
 	@Column(name = "created", insertable = false, updatable = false)
 	@Temporal(TemporalType.TIMESTAMP)
@@ -87,6 +90,14 @@ public class Result implements Serializable {
 
 	public void setAvgDaysInTrade(double avgDaysInTrade) {
 		this.avgDaysInTrade = avgDaysInTrade;
+	}
+
+	public int getCloseDte() {
+		return closeDte;
+	}
+
+	public void setCloseDte(int closeDte) {
+		this.closeDte = closeDte;
 	}
 
 	public Date getCreated() {
