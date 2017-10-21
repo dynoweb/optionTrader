@@ -6,6 +6,7 @@ import java.util.List;
 
 import org.joda.time.DateTime;
 
+import main.TradeProperties;
 import misc.Utils;
 import model.OptionPricing;
 import model.Trade;
@@ -628,6 +629,42 @@ public class OpenTrade {
 		putSpread.setShortOptionOpen(shortPut);
 
 		return putSpread;
+	}
+
+
+	public static void open_20_40_60_Butterfly(Date expiration, int dte) {
+
+		// find short date
+		// from JDK to Joda
+		DateTime jExpDate = new DateTime(expiration);
+		DateTime jTradeDate = new DateTime(jExpDate.minusDays(dte)); 
+		
+		String callPut = "P";
+		OptionPricingService ops = new OptionPricingService();
+		List<OptionPricing> putChain = ops.getOptionChain(jTradeDate.toDate(), expiration, callPut);
+		
+	    if (!putChain.isEmpty()) {
+	    	try {
+	    		// find lower put at delta
+	    		OptionPricing lowerPut = findOptionAtDelta(putChain, TradeProperties.LOWER_DELTA);
+	    		OptionPricing middlePut = findOptionAtDelta(putChain, TradeProperties.MID_DELTA);
+	    		OptionPricing upperPut = findOptionAtDelta(putChain, TradeProperties.UPPER_DELTA);
+	    		
+	    		Butterfly bf = new Butterfly();
+	    		bf.setLowerOptionOpen(lowerPut);
+	    		bf.setMiddleOptionOpen(middlePut);
+	    		bf.setUpperOptionOpen(upperPut);
+	    		
+	    		TradeService.recordButterfly(bf);
+	    		
+	    	} catch (Exception ex) {
+//	    		ex.printStackTrace();
+//	    		System.err.println("Problem with put or call chain");
+	    	}
+	    }
+
+	    
+		
 	}
 
 

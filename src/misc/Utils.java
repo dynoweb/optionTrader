@@ -48,7 +48,7 @@ public class Utils {
 		try {
 			return shortDateFormat.format(date);
 		} catch (Exception e) {
-			e.printStackTrace();
+			//e.printStackTrace();
 			return "MMddYY";
 		}
 	}

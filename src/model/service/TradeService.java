@@ -7,6 +7,7 @@ import javax.persistence.EntityManagerFactory;
 import javax.persistence.Persistence;
 import javax.persistence.Query;
 
+import trade.Butterfly;
 import trade.CalendarSpread;
 import trade.CoveredStraddle;
 import trade.IronCondor;
@@ -438,6 +439,58 @@ public class TradeService {
 		
 		longOpt.setTrade(trade);
 		em.persist(longOpt);
+		
+		em.getTransaction().commit();
+		em.close();
+		emf.close();
+	}
+
+	public static void recordButterfly(Butterfly bf) {
+
+		Trade trade = new Trade();
+		int contracts = TradeProperties.CONTRACTS;
+
+		TradeDetail lowerOption = null;
+		TradeDetail middleOption = null;
+		TradeDetail upperOption = null;
+		
+    	try {
+    		lowerOption = initializeTradeDetail(bf.getLowerOptionOpen(), contracts, "OPENING", "BUY");
+    		middleOption = initializeTradeDetail(bf.getMiddleOptionOpen(), -contracts * 2, "OPENING", "SELL");
+    		upperOption = initializeTradeDetail(bf.getUpperOptionOpen(), contracts, "OPENING", "BUY");
+    	} catch (Exception ex) {
+    		ex.printStackTrace();
+    		throw ex;
+    	}
+		
+		trade.setExecTime(lowerOption.getExecTime());
+		trade.setExp(lowerOption.getExp());
+		trade.setTradeType("BUTTERFLY");
+		trade.setClose_status("OPEN");
+		
+		double fees = contracts * 4 * TradeProperties.COST_PER_CONTRACT_FEE;
+		
+		// Open long open has a neg price since it's money out of pocket, open short is pos since it's credit
+		double openingCost = Utils.round(lowerOption.getPrice() * lowerOption.getQty() * 100 -
+				middleOption.getPrice() * middleOption.getQty() * 100 + 
+				upperOption.getPrice() * upperOption.getQty() * 100 + fees, 2);
+		
+		trade.setOpeningCost(openingCost);
+
+		EntityManagerFactory emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
+		EntityManager em = emf.createEntityManager();
+		
+		em.getTransaction().begin();		
+		em.persist(trade);
+		
+		lowerOption.setTrade(trade);
+		em.persist(lowerOption);
+		
+		middleOption.setTrade(trade);
+		em.persist(middleOption);
+		
+		upperOption.setTrade(trade);
+		em.persist(upperOption);
 		
 		em.getTransaction().commit();
 		em.close();

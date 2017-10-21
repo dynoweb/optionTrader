@@ -46,12 +46,12 @@ public class ExpirationService {
 	
 	
 	/**
-	 * Trying to find the latest trade date for a given expiration
+	 * Find the trade-able dates for a given expiration
 	 * 
 	 * @param expiration
 	 * @return
 	 */
-	public List<Date> getTradeDatesForExpiration(Date expiration) {
+	public static List<Date> getTradeDatesForExpiration(Date expiration) {
 		
 		EntityManagerFactory emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
 		EntityManager em = emf.createEntityManager();

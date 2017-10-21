@@ -563,4 +563,89 @@ public class Report {
 		}
 	}
 
+	public static void build_20_40_60_ButterflyReport(int dte, double lowerDelta, double upperDelta) {
+		
+		List<String> lines = new ArrayList<String>();
+
+		buildHeader(lines);
+
+		double grossCredit = 0.0;	
+		double netProfit = 0.0;
+		double grossRisk = 0.0;
+		double maxProfit = Double.MIN_VALUE;
+		double maxDD = 0.0;
+		double drawDown = 0.0;
+		int numberOfTrades = 0;
+		int profitableTrades = 0;
+		int daysInTrade = 0;
+
+		lines.add("<H3>"+ TradeProperties.SYMBOL + " 20-40-60 Butterfly</H3>");
+		lines.add("<H3> Days To Expiration: " + dte + ", Lower Delta Exit: " + lowerDelta + ", Upper Delta Exit: " + upperDelta + "</H3>");
+//		lines.add("<H3>Profit Target: " + (TradeProperties.PROFIT_TARGET * 100) + "%, Max Loss: " + (TradeProperties.MAX_LOSS * 100) + "%, Close at: " + TradeProperties.CLOSE_DTE + " DTE</H3>");		
+		lines.add("</CENTER>");
+		
+		lines.add("<CENTER><TABLE>");
+		lines.add("<thead>\n<TR><TH>Open Date</TH><TH>Close Date</TH><TH>Expiration</TH><TH>Close Reason</TH><TH>Open Cost</TH><TH>Close Credit</TH><TH>Profit</TH><TH>Net Profit</TH><TH>Draw Down</TH></TR></thead><tbody>");
+
+		List<Trade> trades = TradeService.getTrades();
+		for (Trade trade : trades) {
+
+			numberOfTrades++;
+			netProfit += trade.getProfit();
+			maxProfit = Math.max(maxProfit, netProfit);
+			drawDown = netProfit-maxProfit;
+			maxDD = Math.min(maxDD, drawDown);
+			grossCredit += trade.getOpeningCost();
+			profitableTrades = trade.getProfit() > 0 ? profitableTrades + 1 : profitableTrades; 
+			//grossRisk += (spreadWidth * 100.0 - trade.getOpeningCost());
+			
+			DateTime jOpenDate = new DateTime(trade.getExecTime());
+			DateTime jCloseDate = new DateTime(trade.getCloseDate());
+			Days days = Days.daysBetween(jOpenDate, jCloseDate);
+			daysInTrade += days.getDays();
+						
+			lines.add("  <TR>"
+					+ "<TD>"+Utils.asMMddYY(trade.getExecTime())+"</TD><TD>"+Utils.asMMddYY(trade.getCloseDate())+"</TD>"
+					+ "<TD>"+Utils.asMMddYY(trade.getExp())+"</TD><TD>"+trade.getClose_status()+"</TD>"
+					+ "<TD>"+Utils.round(trade.getOpeningCost(), 2)+"</TD><TD>"+Utils.round(trade.getClosingCost(), 2)+"</TD><TD>"+Utils.round(trade.getProfit(), 2)+"</TD>"
+					+ "<TD>"+Utils.round(netProfit, 2)+"</TD><TD>"+Utils.round(drawDown,2)+"</TD>"
+					+ "</TR>");
+			
+		}
+
+		lines.add("<tbody></TABLE>");
+		lines.add("<br/><h3>Trades: " + numberOfTrades + "</h3>");
+		
+		double shortDelta = lowerDelta; 
+		double spreadWidth = upperDelta;
+		double profitTarget = 0; 
+		double stopLoss = 0; 
+		
+		calculateTradeResults(shortDelta, dte, profitTarget, stopLoss, lines, netProfit, grossRisk, grossCredit, 
+				maxDD, numberOfTrades,	profitableTrades, daysInTrade, spreadWidth);
+		
+		lines.add("<h3>Net Profit: $" + Utils.round(netProfit, 2) + "</h3>");
+//		lines.add("<h3>Avg Profit/Trade: $" + Utils.round(netProfit/numberOfTrades, 2) + "</h3>");
+//		lines.add("<h3>Max Drawdown: $" + Utils.round(maxDD, 2) + "</h3>");
+		lines.add("</CENTER></BODY></HTML>");
+
+		String outFileName = reportFolder + "BF_246_" + TradeProperties.SYMBOL 
+			//	+ "_D_" + shortDelta
+				+ "_DTE_" + dte
+				+ "_LD_" + lowerDelta
+				+ "_UD_" + upperDelta
+			//	+ "_SW_" + spreadWidth 
+			//	+ "_PT_" + (TradeProperties.PROFIT_TARGET * 100.0) 
+			//	+ "_SL_" + (TradeProperties.MAX_LOSS * 100.0)
+			//	+ "_CDTE_" + TradeProperties.CLOSE_DTE 
+				+ ".html";
+		
+		try {
+			writeTextFile(outFileName, lines);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+	}
+
 }

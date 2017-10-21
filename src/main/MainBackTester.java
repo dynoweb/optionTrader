@@ -7,6 +7,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
 import main.TradeProperties.TradeType;
+import trade.Butterfly;
 import trade.CloseTrade;
 import trade.CoveredStraddle;
 import trade.OpenTrade;
@@ -59,6 +60,9 @@ public class MainBackTester {
 		case SHORT_PUT_SPREAD:
 			bt.shortPutSpreadTest();
 			break;
+		case BWBF_20_40_60:
+			bt.bwbf_20_40_60_Test();
+			break;
 		default:
 			System.err.println("Unknown trade type: " + TradeProperties.tradeType);
 			break;
@@ -67,6 +71,53 @@ public class MainBackTester {
 		System.out.println("Processing time: " + new Duration(start, new DateTime()));
 	}
 	
+	/**
+	 * This trade opens a Broken Wing Butterfly x dte, with the legs at 20, 40 & 60 delta.  It closes
+	 * the trade when the short strike delta goes out of range.
+	 */
+	private void bwbf_20_40_60_Test() {
+
+		boolean useWeekly = false;
+		//int[] dtes = { 16,23,30,37,44 };	// trade results not real promissing for these periods
+		//int[] dtes = { 51,58,65,72,79 };
+		int[] dtes = { 65 };
+		//int[] dtes = {TradeProperties.OPEN_DTE};
+
+		//double[] lowerDeltas = { TradeProperties.LOWER_DELTA };
+		//double[] upperDeltas = { TradeProperties.UPPER_DELTA };
+		//double[] lowerDeltas = { 0.05, 0.10, 0.15, 0.20, 0.25, 0.30 };
+		//double[] upperDeltas = { 0.50, 0.55, 0.60, 0.65, 0.70, 0.75 };
+		double[] lowerDeltas = { 0.15 };
+//		double[] upperDeltas = { 0.55, 0.60, 0.70 };
+		double[] upperDeltas = { 0.65 };
+		
+		for (double lowerDelta : lowerDeltas) {
+			for (double upperDelta : upperDeltas) {
+				for (int dte : dtes) {
+					
+					DbService.resetDataBase();
+					
+					List<Date> expirations = null;
+					
+					if (useWeekly) {
+						expirations = Utils.getExpirations();
+					} else {
+						expirations = Utils.getMonthlyExpirations();				
+					}
+						
+					//Butterfly brokenWingButterfly = null;
+					for (Date expiration : expirations) {
+						OpenTrade.open_20_40_60_Butterfly(expiration, dte);
+					}
+					CloseTrade.closeTrades(lowerDelta, upperDelta);
+					
+					Report.build_20_40_60_ButterflyReport(dte, lowerDelta, upperDelta);			
+				}
+			}
+		}
+		System.out.println("Finished!");
+	}
+
 	private void calendarBackTest() {
 		
 		double[] profitTargets = {TradeProperties.PROFIT_TARGET};
@@ -184,8 +235,8 @@ public class MainBackTester {
 	
 		boolean useWeekly = true;
 		
-		double[] spreadWidths = { TradeProperties.SPREAD_WIDTH }; 
-		//double[] spreadWidths = { 5, 10, 25, 50 };
+		//double[] spreadWidths = { TradeProperties.SPREAD_WIDTH }; 
+		double[] spreadWidths = { 5, 10, 25, 50, 100 };
 		//double[] spreadWidths = { 1.0, 2.0, 3.0, 5.0, 10.0 };
 		//double[] spreadWidths = { 10, 20, 50 };				// good for RUT
 		
@@ -280,20 +331,20 @@ public class MainBackTester {
 
 	private void shortCallSpreadTest() {
 		
-		double[] spreadWidths = { TradeProperties.SPREAD_WIDTH }; 
+		//double[] spreadWidths = { TradeProperties.SPREAD_WIDTH }; 
 		//double[] spreadWidths = { 5, 10, 25, 50 };	    // good for SPX
-		//double[] spreadWidths = { 1.0, 2.0, 3.0, 5.0 };	// good for SPY
+		double[] spreadWidths = { 1.0, 2.0, 3.0, 5.0, 10.0 };	// good for SPY
 		//double[] spreadWidths = { 1.0, 2.0, 3.0 };
 	//	double[] spreadWidths = { 10, 20, 50 };				// good for RUT
 		
-		double[] deltas = {TradeProperties.OPEN_DELTA};
+		//double[] deltas = {TradeProperties.OPEN_DELTA};
 		//double[] deltas = {0.0228, 0.0668, 0.1, 0.1587, 0.2, 0.3};
-	//	double[] deltas = {0.1, 0.1587, 0.2, 0.3};
+		double[] deltas = {0.1, 0.1587, 0.2, 0.3};
 		//double[] deltas = {0.0228, 0.0668};
 		//double[] deltas = {0.25};
 
-		int[] openDte = {TradeProperties.OPEN_DTE};
-	//	int[] openDte = {7, 14, 21, 28, 45};
+		//int[] openDte = {TradeProperties.OPEN_DTE};
+		int[] openDte = {7, 14, 21, 28, 45};
 		//int[] openDte = {7, 14};
 		//int[] openDte = {28, 45};
 		
@@ -373,8 +424,8 @@ public class MainBackTester {
 	private void shortPutSpreadTest() {
 		
 		double[] spreadWidths = { TradeProperties.SPREAD_WIDTH }; 
-		//double[] spreadWidths = { 10, 25, 50 };
-		//double[] spreadWidths = { 1.0, 2.0, 3.0, 5.0, 10 };
+		//double[] spreadWidths = { 10, 25, 50, 100 };	// good for SPX
+		//double[] spreadWidths = { 1.0, 2.0, 3.0, 5.0, 10.0 };	// good for SPY
 		//double[] spreadWidths = { 1.0, 2.0, 3.0, 5.0 };
 		//double[] spreadWidths = { 10, 20, 50 };				// good for RUT
 		//double[] spreadWidths = { 100 };
@@ -385,7 +436,8 @@ public class MainBackTester {
 		//double[] deltas = {0.0668, 0.1, 0.1587, 0.2, 0.25, 0.3};
 		//double[] deltas = {0.0228, 0.0668, 0.1, 0.1587, 0.2, 0.25, 0.3};
 		//double[] deltas = {0.2, 0.25, 0.35, 0.4, 0.45};
-		//double[] deltas = { 0.1, 0.1587, 0.2, 0.25, 0.3};
+		//double[] deltas = {0.1, 0.1587, 0.2, 0.25, 0.3};
+		//double[] deltas = {0.1, 0.1587, 0.2, 0.3};
 		//double[] deltas = {0.0228, 0.0668};
 		//double[] deltas = {0.25};
 
@@ -411,7 +463,7 @@ public class MainBackTester {
 					    System.out.println("checking: tradeDate: "  + Utils.asMMMddYYYY(tradeDate) + " expiration: " + Utils.asMMMddYYYY(expiration));
 					    OpenTrade.findShortOptionSpread(tradeDate, expiration, delta, spreadWidth, "P");
 					}
-						
+					// TODO - may need to calculate close date if CLOSE_DTE is != 0 so dates after are not checked for profit target
 					CloseTrade.closeTrades(TradeProperties.tradeType, spreadWidth);
 					
 					Report.shortSpreadReport(delta, spreadWidth, dte, TradeProperties.PROFIT_TARGET, TradeProperties.MAX_LOSS);

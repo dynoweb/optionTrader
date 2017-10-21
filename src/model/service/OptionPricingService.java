@@ -309,13 +309,46 @@ public class OptionPricingService {
 	}
 
 	/**
-	 * Get option chain for a trade start date until expiration at strike and callPutType.
-	 * 
-	 * @param startingTradeDate
-	 * @param expiration
-	 * @param strike
-	 * @param callPut
+	 * Gets the option trade-able date range from startDate to expiration
+	 *  
+	 * Note: not current used or tested 
+	 *  
+	 * @param startDate start of trade date
+	 * @param expiration expiration of option chain
 	 * @return
+	 * 
+	 * @see model.service.ExpirationService.getTradeDatesForExpiration(Date expiration)
+	 */
+	private static List<Date> getTradeDays(Date startDate, Date expiration) {
+		
+		EntityManagerFactory emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
+		EntityManager em = emf.createEntityManager();
+		
+		// Note: table name refers to the Entity Class and is case sensitive
+		//       field names are property names in the Entity Class
+		Query query = em.createQuery("select distinct(opt.trade_date) from " + TradeProperties.SYMBOL_FOR_QUERY + " opt where "
+				+ "opt.trade_date >= :tradeDate " 
+				+ "and opt.expiration=:expiration "	
+				+ " order by opt.trade_date");
+		
+		query.setParameter("tradeDate", startDate);
+		query.setParameter("expiration", expiration);
+
+		query.setHint("odb.read-only", "true");
+
+		@SuppressWarnings("unchecked")
+		List<Date> tradeDates = query.getResultList();
+		
+		em.close();
+		
+		return tradeDates;
+	}
+
+
+	/**
+	 * Gets all the dates traded for the current symbol
+	 * 
+	 * @return List of Date 
 	 */
 	public static List<Date> getTradeDays() {
 		
