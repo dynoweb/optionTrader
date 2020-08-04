@@ -14,7 +14,7 @@ import model.Result;
 public class ResultService {
 
 	
-	public static Result getRecord(int dte, double shortDelta, double width, double profitTarget, double stopLoss, int closeDte) {
+	public static Result getRecord(int dte, double shortDelta, double longDelta, double width, double profitTarget, double stopLoss, int closeDte) {
 		
 		EntityManagerFactory emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
 		EntityManager em = emf.createEntityManager();
@@ -24,6 +24,7 @@ public class ResultService {
 		Query query = em.createQuery("select res from Result res where "
 				+ "res.dte = :dte " 
 				+ "and res.shortDelta = :shortDelta "	
+				+ "and res.longDelta = :longDelta "	
 				+ "and res.width = :width "
 				+ "and res.profitTarget = :profitTarget "
 				+ "and res.stopLoss = :stopLoss "
@@ -34,6 +35,7 @@ public class ResultService {
 		
 		query.setParameter("dte", dte);
 		query.setParameter("shortDelta", shortDelta);
+		query.setParameter("longDelta", longDelta);
 		query.setParameter("width", width);
 		query.setParameter("profitTarget", profitTarget);
 		query.setParameter("stopLoss", stopLoss);
@@ -51,7 +53,7 @@ public class ResultService {
 		} catch (NoResultException ignore) {
 		} catch  (Exception ex) {
 			System.err.println(ex.getMessage());
-			System.err.println(" dte: " + dte + " shortDelta: " + shortDelta + " width: " + width + " profitTarget: " + profitTarget + " stopLoss: " + stopLoss + " closeDte: " + closeDte);
+			System.err.println(" dte: " + dte + " shortDelta: " + shortDelta + " longDelta: " + longDelta + " width: " + width + " profitTarget: " + profitTarget + " stopLoss: " + stopLoss + " closeDte: " + closeDte);
 			ex.printStackTrace();
 			throw ex;
 		}
@@ -68,7 +70,7 @@ public class ResultService {
 		emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
 		em = emf.createEntityManager();
 		
-		Result result = ResultService.getRecord(7, 0.1, 50.0, 0.0, 0.0, 0);
+		Result result = ResultService.getRecord(7, 0.1, 0, 50.0, 0.0, 0.0, 0);
 		
 		if (result != null) {
 			// test edit

@@ -152,6 +152,14 @@ public class TradeDetail implements Serializable {
 		return this.type;
 	}
 
+	/**
+	 * 
+	 * @return Returns "P" or "C"
+	 */
+	public String getPutCallType() {
+		return this.type.equalsIgnoreCase("PUT") ? "P" : "C";
+	}
+
 	public void setType(String type) {
 		this.type = type;
 	}

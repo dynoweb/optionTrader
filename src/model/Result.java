@@ -57,6 +57,9 @@ public class Result implements Serializable {
 	@Column(name="short_delta")
 	private double shortDelta;
 
+	@Column(name="long_delta")
+	private double longDelta;
+
 	@Column(name="stop_loss")
 	private double stopLoss;
 
@@ -186,6 +189,14 @@ public class Result implements Serializable {
 
 	public void setShortDelta(double shortDelta) {
 		this.shortDelta = shortDelta;
+	}
+
+	public double getLongDelta() {
+		return longDelta;
+	}
+
+	public void setLongDelta(double longDelta) {
+		this.longDelta = longDelta;
 	}
 
 	public double getStopLoss() {

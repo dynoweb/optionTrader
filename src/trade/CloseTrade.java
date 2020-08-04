@@ -186,7 +186,7 @@ public class CloseTrade {
 			// Current trade date under consideration
 			DateTime jTradeDate = new DateTime(shortOpt.getTrade_date());
 			
-			OptionPricing longOpt = OptionPricingService.getRecord(shortOpt.getTrade_date(), openingLongLeg.getExp(), openingLongLeg.getStrike(), "P");
+			OptionPricing longOpt = OptionPricingService.getRecord(shortOpt.getTrade_date(), openingLongLeg.getExp(), openingLongLeg.getStrike(), openingLongLeg.getPutCallType());
 			
 			double closingCost = calcClosingCostOfCalendar(shortOpt, longOpt);
 			
@@ -258,26 +258,50 @@ public class CloseTrade {
 		}
 	}
 
-	private static double calcClosingCostOfCalendar(OptionPricing shortOpt, OptionPricing longOpt) {
-		// Calculate the best feasible closing cost for the short put
+	/*
+	 * Result should be positive since when a calendar is closed, you sell it for a credit
+	 */
+	private static double calcClosingCostOfCalendar(OptionPricing shortOpt, OptionPricing longOpt) {		
+		// Calculate the best feasible closing cost for the short call or put
+		double itmShortCost = 0;
+		double itmLongCost = 0;
 		double stockPrice = shortOpt.getAdjusted_stock_close_price();
-		double itmPutCost = stockPrice < shortOpt.getStrike() ? stockPrice - shortOpt.getStrike() : 0.0;
-		if (itmPutCost != 0.0) {
-			itmPutCost = Math.min(itmPutCost, -1 * shortOpt.getMean_price());
+		// - put logic hasn't been verified
+		if (shortOpt.getCall_put().equalsIgnoreCase("PUT")) {	
+			itmShortCost = stockPrice < shortOpt.getStrike() ? stockPrice - shortOpt.getStrike() : 0.0;
+			if (itmShortCost != 0.0) {
+				itmShortCost = Math.min(itmShortCost, -1 * shortOpt.getMean_price());
+			} else {
+				itmShortCost = -1 * shortOpt.getMean_price();
+			}
 		} else {
-			itmPutCost = -1 * shortOpt.getMean_price();
+			itmShortCost = stockPrice > shortOpt.getStrike() ? shortOpt.getStrike()-stockPrice  : 0.0;
+			if (itmShortCost != 0.0) {
+				itmShortCost = Math.min(itmShortCost, shortOpt.getMean_price() * -1);
+			} else {
+				itmShortCost = - shortOpt.getMean_price();
+			}
 		}
 		
-		// will be positive if ITM
-		double itmLongPutCost = stockPrice < longOpt.getStrike() ? longOpt.getStrike() - stockPrice: 0.0;
-		if (itmLongPutCost != 0.0) {
-			itmLongPutCost = Math.max(itmLongPutCost, longOpt.getMean_price());
-		} else {
-			itmLongPutCost = longOpt.getMean_price();
+		// will be positive if ITM - not sure about this - put logic hasn't been verified
+		if (shortOpt.getCall_put().equalsIgnoreCase("PUT")) {
+			itmLongCost = stockPrice < longOpt.getStrike() ? longOpt.getStrike() - stockPrice: 0.0;
+			if (itmLongCost != 0.0) {
+				itmLongCost = Math.max(itmLongCost, longOpt.getMean_price());
+			} else {
+				itmLongCost = longOpt.getMean_price();
+			}
+		} else {	// it's a call
+			itmLongCost = stockPrice > longOpt.getStrike() ? stockPrice - longOpt.getStrike(): 0.0;
+			if (itmLongCost != 0.0) {
+				itmLongCost = Math.max(itmLongCost, longOpt.getMean_price());
+			} else {
+				itmLongCost = longOpt.getMean_price();
+			}
 		}
 							
 		// all legs (trade) closing cost
-		double closingCost = Utils.round((itmLongPutCost + itmPutCost) * 100.00 * TradeProperties.CONTRACTS 
+		double closingCost = Utils.round((itmLongCost + itmShortCost) * 100.00 * TradeProperties.CONTRACTS 
 							+ 2.0 * TradeProperties.CONTRACTS * TradeProperties.COST_PER_CONTRACT_FEE, 2);
 		
 //		if (closingCost < 0) {
@@ -367,6 +391,11 @@ public class CloseTrade {
 		}
 	}
 
+	/**
+	 * Close at stop loss or profit target
+	 * @param trade
+	 * @param maxDte
+	 */
 	private static void closeProfitableOrLosingIronCondor(Trade trade, int maxDte) {
 		
 		Calendar cal = Calendar.getInstance();
@@ -425,7 +454,7 @@ public class CloseTrade {
 					// Close the Iron Condor
 					if (longCall != null && shortCall != null && longPut != null && shortPut != null) {
 						
-						double closingCost = Utils.round(longCall.getMean_price() - shortCall.getMean_price() + longPut.getMean_price() - shortPut.getMean_price(), 2);
+						double closingCost = Utils.round(longCall.getMean_price() - shortCall.getMean_price() + longPut.getMean_price() - shortPut.getMean_price(), 2) * 100;
 						
 						// a PROFIT_TARGET of 0.50 means if we can close for 1/2 the initial credit to close the trade
 						// Note: that openingCost is a negative number, so we want closing cost to be greater 
@@ -433,8 +462,7 @@ public class CloseTrade {
 						if (TradeProperties.PROFIT_TARGET != 0.0) {
 							if (closingCost > trade.getOpeningCost() * (1 - TradeProperties.PROFIT_TARGET)) {
 								
-								System.out.println("Profit Target Closing Cost: " + Utils.round(longCall.getMean_price(),2) + " - " + Utils.round(shortCall.getMean_price(),2) + " + " 
-										 + Utils.round(longPut.getMean_price(),2) + " - " + Utils.round(shortPut.getMean_price(),2));
+								System.out.println("Closing at Profit Target " + trade.getExp() + " - Original credit: " + -trade.getOpeningCost() + "  Cost to close: " + closingCost);
 								
 								trade.setClosingCost(closingCost);
 								trade.setProfit(Utils.round(trade.getClosingCost() - trade.getOpeningCost(),2));
@@ -951,7 +979,7 @@ public class CloseTrade {
 				double closingCost = calcClosingCost(longCall, shortCall, longPut, shortPut);
 				
 				trade.setClosingCost(closingCost);
-				trade.setProfit(Utils.round(trade.getClosingCost() + trade.getOpeningCost(),2));
+				trade.setProfit(Utils.round(trade.getClosingCost() - trade.getOpeningCost(),2));
 				trade.setClose_status(TradeProperties.CLOSE_DTE + " DTE TIME CLOSE");
 				trade.setCloseDate(lastOptionTradedCal.getTime());
 				
@@ -1095,7 +1123,7 @@ public class CloseTrade {
 		emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
 		em = emf.createEntityManager();
 
-		// Check for profit target TradeProperties.PROFIT_TARGET
+		// Check for profit target TradeProperties.PROFIT_TARGET and Stop loss
 		em.getTransaction().begin();		
 		closeProfitableOrLosingTrades();
 		em.getTransaction().commit();

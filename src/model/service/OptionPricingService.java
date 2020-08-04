@@ -256,7 +256,7 @@ public class OptionPricingService {
 				+ "and opt.call_put = :call_put "
 //				+ "and opt.delta > 0.04 "
 //				+ "and opt.delta < 0.96 "
-				+ "order by opt.delta");
+				+ "order by opt.strike");
 		
 		query.setParameter("tradeDate", tradeDate);
 		query.setParameter("expiration", expiration);

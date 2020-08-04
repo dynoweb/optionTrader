@@ -248,7 +248,7 @@ public class TradeService {
 							 Utils.round(shortCall.getPrice() * 100 + longCall.getPrice() * 100, 2) +
 							 fees;
 				 
-		trade.setOpeningCost(openingCost);
+		trade.setOpeningCost(-openingCost);	// negative because it's a credit, I'm selling the condor to open
 
 		EntityManagerFactory emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
 		EntityManager em = emf.createEntityManager();

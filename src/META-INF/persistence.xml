@@ -1,22 +1,42 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <persistence 
-	version="2.1" xmlns="http://xmlns.jcp.org/xml/ns/persistence" 
+	version="2.2" xmlns="http://xmlns.jcp.org/xml/ns/persistence" 
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
-	xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/persistence http://xmlns.jcp.org/xml/ns/persistence/persistence_2_1.xsd">
+	xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/persistence http://xmlns.jcp.org/xml/ns/persistence/persistence_2_2.xsd">
 	<persistence-unit name="JPAOptionsTrader">
+		<class>model.Aapl</class>
+		<class>model.Amd</class>
+		<class>model.Amzn</class>
+		<class>model.Ba</class>
+		<class>model.C</class>
+		<class>model.Cost</class>
+		<class>model.Dia</class>
+		<class>model.Eem</class>
+		<class>model.Fas</class>
+		<class>model.Fb</class>
+		<class>model.Gld</class>
+		<class>model.Goog</class>
+		<class>model.Iwm</class>
+		<class>model.Jpm</class>
+		<class>model.Mcd</class>
+		<class>model.Msft</class>
+		<class>model.Ndx</class>
+		<class>model.Nflx</class>
+		<class>model.Qqq</class>
+		<class>model.Rut</class>
+		<class>model.Rvx</class>
+		<class>model.Slv</class>
 		<class>model.Spx</class>
+		<class>model.Spy</class>
+		<class>model.Tlt</class>
+		<class>model.Tna</class>
+		<class>model.Tqqq</class>
+		<class>model.Result</class>
 		<class>model.Holiday</class>
 		<class>model.OptionsExpiration</class>
 		<class>model.OptionPricing</class>
 		<class>model.Trade</class>
 		<class>model.TradeDetail</class>
-		<class>model.Eem</class>
-		<class>model.Tlt</class>
-		<class>model.Spy</class>
-		<class>model.Iwm</class>
-		<class>model.Rut</class>
-		<class>model.Gld</class>
-		<class>model.Result</class>
         <properties>         
           <property name="javax.persistence.jdbc.driver" value="com.mysql.jdbc.Driver"/> 
           <property name="javax.persistence.jdbc.url" value="jdbc:mysql://localhost:3306/optionsdb"/> 

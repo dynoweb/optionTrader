@@ -64,12 +64,14 @@ public class Report {
 	static EntityManagerFactory emf = null;
 	static EntityManager em = null; 
 
-	public static void buildCalendarReport(double profitTarget, int closeDte, double maxLoss) {
+	public static void buildCalendarReport(double profitTarget, double maxLoss, int nearDte, int farDte, int closeDte,
+			double shortDelta, String putCall) {
 
 		List<String> lines = new ArrayList<String>();
 
 		buildHeader(lines);
 
+		double longDelta = 0.0;
 		double netProfit = 0.0;
 		double grossRisk = 0.0;
 		double grossCredit = 0.0;
@@ -80,15 +82,15 @@ public class Report {
 		int profitableTrades = 0;
 		int daysInTrade = 0;
 
-		String shortDeltaDesc = "1st Strike ITM";
-		String dteDesc = "Nearest Monthly Expiration to 45 days and next Monthly(for long)";
+		String shortDeltaDesc = "1st Strike " + shortDelta + " OTM";
+		String dteDesc = "Short DTE " + nearDte + " long DTE " + farDte;
 		double spreadWidth = 0.0;
-		double shortDelta = 0.5;
-		int dte = 45;
+		//double shortDelta = 0.5;
+		//int dte = 45;
 
 		String tradeType = "Calendar";
 		lines.add("<H3>"+ TradeProperties.SYMBOL + " - " + tradeType + "</H3>");
-		lines.add("<H3> Short Delta: " + shortDeltaDesc + ", Days To Expiration: " + dte + "</H3>");
+		lines.add("<H3> Short DTE: " + nearDte + ", Long DTE: " + farDte + ", Short Delta: " + shortDelta + "</H3>");
 		lines.add("<H3>Profit Target: " + (profitTarget * 100) + "%, Max Loss: " + (maxLoss * 100) + "%, Close at: " + closeDte + " DTE</H3>");		
 		lines.add("</CENTER>");
 
@@ -123,13 +125,23 @@ public class Report {
 					+ "<TD>" + trade.getProfit() + "</TD>"
 					+ "<TD>" + Utils.round(netProfit, 2) + "</TD>"
 					+ "<TD>" + Utils.round(drawDown,2) + "</TD>"
-					+ "</TR>");			
+					+ "</TR>");	
+			
+			System.out.println(Utils.asMMddYY(trade.getExecTime()) + ","
+					+ Utils.asMMddYY(trade.getCloseDate()) + ","
+					+ Utils.asMMddYY(trade.getExp()) + ","
+					+ trade.getClose_status() + ","
+					+ trade.getOpeningCost() + ","
+					+ trade.getClosingCost() + ","
+					+ trade.getProfit() + ","
+					+ Utils.round(netProfit, 2) + ","
+					+ Utils.round(drawDown,2));			
 		}
 		
 		lines.add("<tbody></TABLE>");
 		lines.add("<br/><h3>Trades: " + numberOfTrades + "</h3>");
 
-		calculateTradeResults(shortDelta, dte, profitTarget, maxLoss, lines, netProfit, Math.abs(grossRisk), grossCredit, maxDD, numberOfTrades,
+		calculateTradeResults(shortDelta, longDelta, nearDte, profitTarget, maxLoss, lines, netProfit, Math.abs(grossRisk), Math.abs(grossCredit), maxDD, numberOfTrades,
 				profitableTrades, daysInTrade, spreadWidth, closeDte);
 		
 		lines.add("<h3>Net Profit: $" + Utils.round(netProfit,2) + "</h3></CENTER>");
@@ -137,9 +149,9 @@ public class Report {
 		
 		String prefix = "CAL_";
 		String outFileName = reportFolder + prefix + TradeProperties.SYMBOL 
-				+ "_D_" + shortDelta 
-				+ "_DTE_" + dte 
-				+ "_SW" + spreadWidth
+				+ "_SDTE_" + nearDte 
+				+ "_LDTE_" + farDte 
+				+ "_SD_" + shortDelta
 				+ "_PT_" + (profitTarget * 100) 
 				+ "_SL_" + (maxLoss * 100)
 				+ "_CDTE_" + closeDte + ".html";
@@ -225,7 +237,7 @@ public class Report {
 		lines.add("<BODY><CENTER>");	
 	}
 
-	public static void buildIronCondorReport(double shortDelta, double spreadWidth, int dte, double profitTarget, double stopLoss) {
+	public static void buildIronCondorReport(double shortDelta, double longDelta, double spreadWidth, int dte, double profitTarget, double stopLoss) {
 		
 		List<String> lines = new ArrayList<String>();
 
@@ -242,7 +254,7 @@ public class Report {
 		int daysInTrade = 0;
 
 		lines.add("<H3>"+ TradeProperties.SYMBOL + " - Iron Condor</H3>");
-		lines.add("<H3> Short Delta: " + shortDelta + ", Days To Expiration: " + dte + ", Spread Width: " + spreadWidth + "</H3>");
+		lines.add("<H3> Short Delta: " + shortDelta + ", Long Delta: " + longDelta + ", Days To Expiration: " + dte + ", Spread Width: " + spreadWidth + "</H3>");
 		lines.add("<H3>Profit Target: " + (TradeProperties.PROFIT_TARGET * 100) + "%, Max Loss: " + (TradeProperties.MAX_LOSS * 100) + "%, Close at: " + TradeProperties.CLOSE_DTE + " DTE</H3>");		
 		lines.add("</CENTER>");
 		
@@ -257,7 +269,7 @@ public class Report {
 			maxProfit = Math.max(maxProfit, netProfit);
 			drawDown = netProfit-maxProfit;
 			maxDD = Math.min(maxDD, drawDown);
-			grossCredit += trade.getOpeningCost();
+			grossCredit += trade.getOpeningCost() * -1;
 			profitableTrades = trade.getProfit() > 0 ? profitableTrades + 1 : profitableTrades; 
 			grossRisk += (spreadWidth * 100.0 - trade.getOpeningCost());
 			
@@ -278,14 +290,15 @@ public class Report {
 		lines.add("<tbody></TABLE>");
 		lines.add("<br/><h3>Trades: " + numberOfTrades + "</h3>");
 		
-		calculateTradeResults(shortDelta, dte, profitTarget, stopLoss, lines, netProfit, grossRisk, grossCredit, 
+		calculateTradeResults(shortDelta, longDelta, dte, profitTarget, stopLoss, lines, netProfit, grossRisk, grossCredit, 
 				maxDD, numberOfTrades,	profitableTrades, daysInTrade, spreadWidth);
 		
 		lines.add("<h3>Net Profit: $" + Utils.round(netProfit,2) + "</h3></CENTER>");
 		lines.add("</BODY></HTML>");
 
 		String outFileName = reportFolder + "IC_" + TradeProperties.SYMBOL 
-				+ "_D_" + shortDelta
+				+ "_SD_" + shortDelta
+				+ "_LD_" + longDelta
 				+ "_DTE_" + dte
 				+ "_SW_" + spreadWidth 
 				+ "_PT_" + (TradeProperties.PROFIT_TARGET * 100.0) 
@@ -299,18 +312,18 @@ public class Report {
 		}
 	}
 
-	private static void calculateTradeResults(double shortDelta, int dte, double profitTarget, double stopLoss,
+	private static void calculateTradeResults(double shortDelta, double longDelta, int dte, double profitTarget, double stopLoss,
 			List<String> lines, double netProfit, double grossRisk, double grossCredit, double maxDD, int numberOfTrades,
 			int profitableTrades, int daysInTrade, double spreadWidth) {
 		
-		calculateTradeResults(shortDelta, dte, profitTarget, stopLoss, lines, netProfit, grossRisk, grossCredit, maxDD, numberOfTrades,
+		calculateTradeResults(shortDelta, longDelta, dte, profitTarget, stopLoss, lines, netProfit, grossRisk, grossCredit, maxDD, numberOfTrades,
 				profitableTrades, daysInTrade, spreadWidth, TradeProperties.CLOSE_DTE);
 	}
 	
-	private static void calculateTradeResults(double shortDelta, int dte, double profitTarget, double stopLoss, 
-			List<String> lines, double netProfit,
-			double grossRisk, double grossCredit, double maxDD, int numberOfTrades, int profitableTrades,
-			int daysInTrade, double spreadWidth, int closeDte) {
+	private static void calculateTradeResults(double shortDelta, double longDelta, int dte, double profitTarget, double stopLoss, 
+			List<String> lines, double netProfit, double grossRisk, double grossCredit, double maxDD, int numberOfTrades, 
+			int profitableTrades, int daysInTrade, double spreadWidth, 
+			int closeDte) {
 		
 		double avgDaysInTrade = 0;
 		double avgReturnPerTrade = 0.0;
@@ -325,7 +338,7 @@ public class Report {
 			creditPerTrade = Utils.round(grossCredit/numberOfTrades, 2);
 			lines.add("<h3>Avg Credit(Cost) Per Trade: " + creditPerTrade + "</h3>");
 			if (grossRisk != 0) {
-				avgReturnPerTrade = Utils.round(100.0 * netProfit/grossRisk, 2);
+				avgReturnPerTrade = Utils.round(100.0 * netProfit/grossCredit, 2);
 			} 
 			lines.add("<h3>Avg Return Per Trade: " + avgReturnPerTrade + "%</h3>");
 			if (daysInTrade != 0) { 
@@ -341,12 +354,12 @@ public class Report {
 			lines.add("<h3>        Max Drawdown: $" + Utils.round(maxDD, 2) + "</h3>");
 		}		
 
-		captureResults(shortDelta, spreadWidth, dte, profitTarget, stopLoss, 
+		captureResults(shortDelta, longDelta, spreadWidth, dte, profitTarget, stopLoss, 
 				netProfit, maxDD, numberOfTrades, avgDaysInTrade, avgReturnPerTrade, 
 				creditPerTrade, percentProfitable, profitPerDay, profitPerTrade, closeDte);
 	}
 
-	private static void captureResults(double shortDelta, double spreadWidth, int dte, double profitTarget, double stopLoss, 
+	private static void captureResults(double shortDelta, double longDelta, double spreadWidth, int dte, double profitTarget, double stopLoss, 
 			double netProfit, double maxDD,	int numberOfTrades, double avgDaysInTrade, double avgReturnPerTrade, 
 			double creditPerTrade,	double percentProfitable, double profitPerDay, double profitPerTrade, int closeDte) {
 		
@@ -354,7 +367,7 @@ public class Report {
 		em = emf.createEntityManager();
 		em.getTransaction().begin();		
 
-		Result result = ResultService.getRecord(dte, shortDelta, spreadWidth, profitTarget, stopLoss, closeDte);
+		Result result = ResultService.getRecord(dte, shortDelta, longDelta, spreadWidth, profitTarget, stopLoss, closeDte);
 		if (result == null) {
 		 	result = new Result();
 		}
@@ -371,6 +384,7 @@ public class Report {
 		result.setProfitTarget(profitTarget);
 		result.setReturnPerTrade(avgReturnPerTrade);
 		result.setShortDelta(shortDelta);
+		result.setLongDelta(longDelta);
 		result.setStopLoss(stopLoss);
 		result.setSymbol(TradeProperties.SYMBOL);
 		result.setTrades(numberOfTrades);
@@ -391,7 +405,7 @@ public class Report {
 		emf.close();
 	}
 
-	public static void shortOptionReport(double shortDelta, int dte, double profitTarget, double stopLoss) {
+	public static void shortOptionReport(double shortDelta, double longDelta, int dte, double profitTarget, double stopLoss) {
 
 		List<String> lines = new ArrayList<String>();
 
@@ -448,7 +462,7 @@ public class Report {
 		lines.add("<tbody></TABLE>");
 		lines.add("<br/><h3>Trades: " + numberOfTrades + "</h3>");
 
-		calculateTradeResults(shortDelta, dte, profitTarget, stopLoss, lines, netProfit, grossRisk, grossCredit, maxDD, numberOfTrades,
+		calculateTradeResults(shortDelta, longDelta, dte, profitTarget, stopLoss, lines, netProfit, grossRisk, grossCredit, maxDD, numberOfTrades,
 				profitableTrades, daysInTrade, spreadWidth);
 
 		lines.add("<h3>Net Profit: $" + Utils.round(netProfit,2) + "</h3></CENTER>");
@@ -470,7 +484,7 @@ public class Report {
 		}
 	}
 
-	public static void shortSpreadReport(double shortDelta, double spreadWidth, int dte, double profitTarget, double stopLoss) {
+	public static void shortSpreadReport(double shortDelta, double longDelta, double spreadWidth, int dte, double profitTarget, double stopLoss) {
 		
 		List<String> lines = new ArrayList<String>();
 
@@ -529,7 +543,7 @@ public class Report {
 		lines.add("<tbody></TABLE>");
 		lines.add("<br/><h3>Trades: " + numberOfTrades + "</h3>");
 
-		calculateTradeResults(shortDelta, dte, profitTarget, stopLoss, lines, netProfit, grossRisk, grossCredit, maxDD, numberOfTrades,
+		calculateTradeResults(shortDelta, longDelta, dte, profitTarget, stopLoss, lines, netProfit, grossRisk, grossCredit, maxDD, numberOfTrades,
 				profitableTrades, daysInTrade, spreadWidth);
 		
 		lines.add("<h3>Net Profit: $" + Utils.round(netProfit,2) + "</h3></CENTER>");
@@ -537,7 +551,8 @@ public class Report {
 		
 		String prefix = tradeType.equals("Short Put Spread") ? "SPS_" : "SCS_";
 		String outFileName = reportFolder + prefix + TradeProperties.SYMBOL 
-				+ "_D_" + shortDelta 
+				+ "_SD_" + shortDelta 
+				+ "_LD_" + longDelta 
 				+ "_DTE_" + dte 
 				+ "_SW" + spreadWidth
 				+ "_PT_" + (TradeProperties.PROFIT_TARGET * 100) 
@@ -617,11 +632,12 @@ public class Report {
 		lines.add("<br/><h3>Trades: " + numberOfTrades + "</h3>");
 		
 		double shortDelta = lowerDelta; 
-		double spreadWidth = upperDelta;
+		double longDelta = upperDelta;
+		double spreadWidth = 0;
 		double profitTarget = 0; 
 		double stopLoss = 0; 
 		
-		calculateTradeResults(shortDelta, dte, profitTarget, stopLoss, lines, netProfit, grossRisk, grossCredit, 
+		calculateTradeResults(shortDelta, longDelta, dte, profitTarget, stopLoss, lines, netProfit, grossRisk, grossCredit, 
 				maxDD, numberOfTrades,	profitableTrades, daysInTrade, spreadWidth);
 		
 		lines.add("<h3>Net Profit: $" + Utils.round(netProfit, 2) + "</h3>");
@@ -647,5 +663,6 @@ public class Report {
 		}
 		
 	}
+
 
 }

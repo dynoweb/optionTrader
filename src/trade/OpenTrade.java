@@ -1,5 +1,6 @@
 package trade;
 
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
@@ -108,7 +109,7 @@ public class OpenTrade {
 	}
 	
 	
-	public static void findIronCondorChains(Date tradeDate, Date expiration, double openDelta, double spreadWidth) {
+	public static void findIronCondorChains(Date tradeDate, Date expiration, double shortDelta, double longDelta, double spreadWidth) {
 		
 		String callPut;
 		OptionPricingService ops = new OptionPricingService();
@@ -139,7 +140,7 @@ public class OpenTrade {
 		    List<OptionPricing> putChain = ops.getOptionChain(tradeDate, expiration, callPut);
 		    if (!putChain.isEmpty()) {
 		    	try {
-		    		openIronCondor(callChain, putChain, openDelta, spreadWidth);
+		    		openIronCondor(callChain, putChain, shortDelta, longDelta, spreadWidth);
 		    	} catch (Exception ex) {
 //		    		ex.printStackTrace();
 //		    		System.err.println("Problem with put or call chain");
@@ -240,18 +241,26 @@ public class OpenTrade {
 	    return option;
 	}
 
-	private static OptionPricing getAtmShort(Date tradeDate, Date expiration, String callPut) {
 
-		OptionPricing shortOpt = null;
+	/**
+	 * 
+	 * @param tradeDate
+	 * @param expiration
+	 * @param priceOffset	0 for ATM, positive offset of price above ATM, and negative for below ATM 
+	 * @param callPut "P" or "C"
+	 * @return
+	 */
+	private static OptionPricing getOptionAtmPlusOffset(Date tradeDate, Date expiration, Double priceOffset, String callPut) {
+
+		OptionPricing option = null;
 		
 		OptionPricingService ops = new OptionPricingService();
 		List<OptionPricing> optChain = ops.getOptionChain(tradeDate, expiration, callPut);
 		
 	    if (!optChain.isEmpty()) {
-			for (OptionPricing option : optChain) {
-				if (option.getStrike() > option.getAdjusted_stock_close_price()) {
-					shortOpt = option;
-				} else {
+			for (OptionPricing optionItem : optChain) {
+				if (optionItem.getStrike() > (optionItem.getAdjusted_stock_close_price() + priceOffset)) {
+					option = optionItem;
 					break;
 				}
 			}
@@ -260,26 +269,23 @@ public class OpenTrade {
 	    } else {
 	    	System.err.println("Option chain is empty for tradeDate: " + tradeDate + " and expiration: " + expiration);
 	    }
-	    return shortOpt;
+	    return option;
 	}
 
-	public static void findShort(Date tradeDate, Date expiration, double delta, String callPut) {
+	public static OptionPricing findShort(Date tradeDate, Date expiration, double delta, String callPut) {
 
 		OptionPricingService ops = new OptionPricingService();
 		List<OptionPricing> optChain = ops.getOptionChain(tradeDate, expiration, callPut);
+		OptionPricing shortOpt = null;
 		
 	    if (!optChain.isEmpty()) {
 	    	try {
-	    		OptionPricing shortOpt = findOptionAtDelta(optChain, delta);
+	    		shortOpt = findOptionAtDelta(optChain, delta);
 	    		
-	    		   // validate contract   			// short option is priced                  // credit is created
-	    		if (shortOpt != null && shortOpt.getBid() != 0 && shortOpt.getAsk() != 0 && shortOpt.getMean_price() > 0) {
-	    			
-	    			if (shortOpt.getMean_price() != 0.0 && shortOpt.getDelta() != 0 ) {
-	    				
-	    				// write the opening Trade and TradeDetails to the database
-	    				TradeService.recordShort(shortOpt);
-	    			}
+	    		   // validate contract
+	    		if (shortOpt.getBid() == 0 || shortOpt.getAsk() == 0 
+	    				|| shortOpt.getMean_price() == 0 || shortOpt.getDelta() == 0) {
+	    			shortOpt = null;
 	    		}
 	    	} catch (Exception ex) {
 	    		ex.printStackTrace();
@@ -288,9 +294,10 @@ public class OpenTrade {
 	    } else {
 	    	System.err.println("Option chain is empty for tradeDate: " + tradeDate + " and expiration: " + expiration);
 	    }
+    	return shortOpt;
 	}
 
-	public static void findShortOptionSpread(Date tradeDate, Date expiration, double delta, double spreadWidth, String callPut) {
+	public static void findShortOptionSpread(Date tradeDate, Date expiration, double shortDelta, double longDelta, double spreadWidth, String callPut) {
 
 		//String callPut = "C";
 		OptionPricingService ops = new OptionPricingService();
@@ -300,9 +307,9 @@ public class OpenTrade {
 	    	try {
 	    		VerticalSpread optSpread = null;
 	    		if (callPut.equals("C")) {
-	    			optSpread = openCallSpread(optChain, delta, spreadWidth);
+	    			optSpread = openCallSpread(optChain, shortDelta, longDelta, spreadWidth);
 	    		} else {
-	    			optSpread = openPutSpread(optChain, delta, spreadWidth);
+	    			optSpread = openPutSpread(optChain, shortDelta, longDelta, spreadWidth);
 	    		}
 	    		// Validating contract pricing
 	    		// found long and short contract
@@ -329,7 +336,7 @@ public class OpenTrade {
 	}
 
 
-	private static void findShortPutSpread(Date tradeDate, Date expiration, double delta, double spreadWidth) {
+	private static void findShortPutSpread(Date tradeDate, Date expiration, double shortDelta, double longDelta, double spreadWidth) {
 
 		String callPut = "P";
 		OptionPricingService ops = new OptionPricingService();
@@ -337,7 +344,7 @@ public class OpenTrade {
 		
 	    if (!putChain.isEmpty()) {
 	    	try {
-	    		VerticalSpread putSpread = openPutSpread(putChain, delta, spreadWidth);
+	    		VerticalSpread putSpread = openPutSpread(putChain, shortDelta, longDelta, spreadWidth);
 	    		// Validating contract pricing
 	    		// found long and short contract
 	    		if (putSpread.getShortOptionOpen() != null && putSpread.getLongOptionOpen() != null
@@ -470,12 +477,15 @@ public class OpenTrade {
 
 	/**
 	 * Finds trade details for a calendar trade.  This will be different from other OpenTrades since 
-	 * it will be opening trade daily to get test instances.
-	 * @param expirationList
+	 * it will be opening trades daily to get test instances.
+	 * @param nearDte
+	 * @param farDte
+	 * @param delta
+	 * @param putCall "P" or "C"
 	 */
-	public static void openCalendar() {
+	public static void openCalendar(int nearDte, int farDte, double delta, String putCall) {
 
-		boolean useWeekly = false;
+		boolean useWeekly = true;		
 
 		List<Date> expirationList = null;
 		
@@ -489,7 +499,6 @@ public class OpenTrade {
 		
 		List<Date> tradeDays = OptionPricingService.getTradeDays();
 
-		// for now, let's do the 45 DTE and the next month
 		for (Date tradeDate : tradeDays) {
 			
 			Date longExpiration = null;
@@ -498,38 +507,64 @@ public class OpenTrade {
 			// find short date
 			// from JDK to Joda
 			DateTime jOpenDate = new DateTime(tradeDate);
-			DateTime jShortExpDateStart = new DateTime(jOpenDate.plusDays(31)); 
-			DateTime jShortExpDateEnd = new DateTime(jOpenDate.plusDays(59));
+			DateTime jNearExpDate = new DateTime(jOpenDate.plusDays(nearDte)); 
+			DateTime jFarExpDate = new DateTime(jOpenDate.plusDays(farDte));
 			
 			// TODO - TRADE FILTER - remove me to clear filter, this is here to make it run faster
 //			if (jOpenDate.getYear() != 2015) { // || jOpenDate.getMonthOfYear() == 18) { // || jOpenDate.getDayOfMonth() != 22) {
 //				continue;
 //			}
+//			if (jOpenDate.getYear() < 2018) {
+//				continue;	// skip these years				
+//			}
 			
 			// find short expiration
-			for (int i = 0; i < expirations.length; i++) {
-				DateTime jExp = new DateTime(expirations[i]);
-				if (jExp.isAfter(jShortExpDateStart) && jExp.isBefore(jShortExpDateEnd)) {
-					shortExpiration = jExp.toDate();
-					// TODO do this better than this, it could still be assigning the wrong date to the out leg, should also consider handling different intervals
-					if (jExp.plusDays(20).isAfter(new DateTime(expirations[i+1]))) {						
-						// hopefully this is long enough
-						longExpiration = expirations[i+2];
-					} else {
-						longExpiration = expirations[i+1];
+//			for (int i = 0; i < expirations.length; i++) {
+//				DateTime jExp = new DateTime(expirations[i]);
+//				if (jExp.isAfter(jNearExpDate) && jExp.isBefore(jFarExpDate)) {
+//					shortExpiration = jExp.toDate();
+//					// TODO do this better than this, it could still be assigning the wrong date to the out leg, should also consider handling different intervals
+//					if (jExp.plusDays(20).isAfter(new DateTime(expirations[i+1]))) {						
+//						// hopefully this is long enough
+//						longExpiration = expirations[i+2];
+//					} else {
+//						longExpiration = expirations[i+1];
+//					}
+//					break;
+//				}
+//			}
+
+			// find short expiration
+			Arrays.sort(expirations);	// binarySearch assumes array is sorted
+			int position = Arrays.binarySearch(expirations, jNearExpDate.toDate());
+			// Note another option to using binarySearch would be using a list
+			//   List<Date> list = Arrays.asList(expirations);
+		    //   list.contains(item);
+			if (position >= 0) {
+				shortExpiration = jNearExpDate.toDate();
+				// find long expiration
+				position = Arrays.binarySearch(expirations, jFarExpDate.toDate());
+				if (position >= 0) {
+					longExpiration = jFarExpDate.toDate();
+				} else {
+					// is there an expiration one more day later? 
+					position = Arrays.binarySearch(expirations, jFarExpDate.plusDays(1).toDate());
+					if (position >= 0) {
+						longExpiration = expirations[position];
 					}
-					break;
 				}
 			}
-			
+
+						
+			// if it found trade-able dates, get strikes
 			if (shortExpiration != null && longExpiration != null) {				
-				OptionPricing shortOption = OpenTrade.getAtmShort(tradeDate, shortExpiration, "P");
+				OptionPricing shortOption = OpenTrade.findShort(tradeDate, shortExpiration, delta, putCall);
 				
 				if (shortOption != null) {
 					System.out.println("Opening Calendar on:" + Utils.asMMddYY(tradeDate) + " strike:" + shortOption.getStrike() 
 							+ "  nearExpiry:" + Utils.asMMddYY(shortExpiration) + " farExpiry:" + Utils.asMMddYY(longExpiration));
 					
-					OptionPricing longOption = OpenTrade.getOptionAtStrike(tradeDate, longExpiration, shortOption.getStrike(), "P");
+					OptionPricing longOption = OpenTrade.getOptionAtStrike(tradeDate, longExpiration, shortOption.getStrike(), putCall);
 			    				
 					if (longOption != null) {
 						CalendarSpread calendarSpread = new CalendarSpread();
@@ -545,20 +580,25 @@ public class OpenTrade {
 		
 	}
 
-	private static VerticalSpread openCallSpread(List<OptionPricing> callChain, double openDelta, double spreadWidth) {
+	private static VerticalSpread openCallSpread(List<OptionPricing> callChain, double shortDelta, double longDelta, double spreadWidth) {
 		
 		// find short call at delta
-		OptionPricing shortCall = findOptionAtDelta(callChain, openDelta);
+		OptionPricing shortCall = findOptionAtDelta(callChain, shortDelta);
 		
 		// get long call
-		double longStrike = shortCall.getStrike() + spreadWidth;
 		OptionPricing longCall = null;
+		double longStrike = 0;
 		
-		for (OptionPricing call : callChain) {
-			if (call.getStrike() == longStrike) {
-				longCall = call;
-				break;
+		if (spreadWidth > 0) {
+			longStrike = shortCall.getStrike() + spreadWidth;
+			for (OptionPricing call : callChain) {
+				if (call.getStrike() == longStrike) {
+					longCall = call;
+					break;
+				}
 			}
+		} else if (longDelta != 0) {
+			longCall = findOptionAtDelta(callChain, longDelta);
 		}
 
 		VerticalSpread callSpread = new VerticalSpread();
@@ -569,10 +609,10 @@ public class OpenTrade {
 	}
 
 
-	public static void openIronCondor(List<OptionPricing> callChain, List<OptionPricing> putChain, double openDelta, double spreadWidth) {
+	public static void openIronCondor(List<OptionPricing> callChain, List<OptionPricing> putChain, double shortDelta, double longDelta, double spreadWidth) {
 		
-		VerticalSpread callSpread = openCallSpread(callChain, openDelta, spreadWidth);
-		VerticalSpread putSpread = openPutSpread(putChain, openDelta, spreadWidth);
+		VerticalSpread callSpread = openCallSpread(callChain, shortDelta, longDelta, spreadWidth);
+		VerticalSpread putSpread = openPutSpread(putChain, shortDelta, longDelta, spreadWidth);
 		
 		if (callSpread == null || callSpread.getLongOptionOpen() == null) {
 			System.out.println("null pointer problem");
@@ -586,28 +626,33 @@ public class OpenTrade {
 	}
 
 
-	private static VerticalSpread openPutSpread(List<OptionPricing> putChain, double openDelta, double spreadWidth) {
+	private static VerticalSpread openPutSpread(List<OptionPricing> putChain, double shortDelta, double longDelta, double spreadWidth) {
 		
 		// set to true if creating a spread of 1 buy 1 isn't available, then find the next available option
 //		boolean enableWidthExtention = false;
 		
-		// Build Put Bull Debit Spread
-		OptionPricing shortPut = findOptionAtDelta(putChain, openDelta);
+		// Build Put Bull Credit Spread
+		OptionPricing shortPut = findOptionAtDelta(putChain, shortDelta);
 		if (shortPut == null) {
 			System.err.println("Could not find a suitable put");
 		}
 		
 		// get long put
-		double putStrike = shortPut.getStrike() - spreadWidth;
 		OptionPricing longPut = null;
-		
-		for (OptionPricing put : putChain) {
-			if (put.getStrike() == putStrike) {
-				longPut = put;
-				break;
+		double longStrike = 0;
+
+		if (spreadWidth > 0) {
+			longStrike = shortPut.getStrike() - spreadWidth;
+			for (OptionPricing put : putChain) {
+				if (put.getStrike() == longStrike) {
+					longPut = put;
+					break;
+				}
 			}
+		} else if (longDelta != 0) {
+			longPut = findOptionAtDelta(putChain, longDelta);
 		}
-		
+				
 		// Add a non-standard spread width long put
 //		if (enableWidthExtention && longPut == null) {
 //			OptionPricing longPutCandidate = null;
