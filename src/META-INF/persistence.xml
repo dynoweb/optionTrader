@@ -31,6 +31,7 @@
 		<class>model.Tlt</class>
 		<class>model.Tna</class>
 		<class>model.Tqqq</class>
+		<class>model.Xsp</class>
 		<class>model.Result</class>
 		<class>model.Holiday</class>
 		<class>model.OptionsExpiration</class>

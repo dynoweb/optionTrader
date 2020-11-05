@@ -52,7 +52,7 @@ public class TradeProperties {
 //	public static final String SYMBOL_FOR_QUERY = "Spy";
 //	public static final String SYMBOL_FOR_QUERY = "Tlt";
 //	public static final String SYMBOL_FOR_QUERY = "Tna";
-	public static final String SYMBOL_FOR_QUERY = "Tqqq";
+	public static final String SYMBOL_FOR_QUERY = "Xsp";
 	
 	public static final String SYMBOL = SYMBOL_FOR_QUERY.toUpperCase();
 	public static final int CONTRACTS = 1;
@@ -68,9 +68,9 @@ public class TradeProperties {
 	// Delta = 0.0228 - 2 SD
 	//
 	// Open trade properties
-	public static double SHORT_DELTA = 0.2;
+	public static double SHORT_DELTA = 0.25;
 	public static double LONG_DELTA = 0.0;
-	public static int OPEN_DTE = 7;
+	public static int OPEN_DTE = 21;
 	public static double SPREAD_WIDTH = 10;
 	
 	// Close trade properties
