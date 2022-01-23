@@ -1087,10 +1087,6 @@ public class CloseTrade {
 		List<Trade> trades = TradeService.getOpenTrades();
 		for (Trade trade : trades) {		
 			
-//			emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
-//			em = emf.createEntityManager();
-//			em.getTransaction().begin();
-			
 			if (trade.getTradeType().equals("SHORT CALL")) {
 				//closeShortCall(trade, profitTarget);
 				closeShort(trade, profitTarget);
@@ -1101,10 +1097,6 @@ public class CloseTrade {
 			if (trade.getTradeType().equals("CALENDAR")) {
 				closeCalendar(trade, profitTarget, closeDte, maxLoss);
 			}
-			
-//			em.getTransaction().commit();
-//			em.close();
-//			emf.close();
 		}
 		
 		em.getTransaction().commit();
