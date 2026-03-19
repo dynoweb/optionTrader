@@ -15,7 +15,7 @@ import org.joda.time.DateTimeConstants;
 
 import main.TradeProperties;
 import misc.Utils;
-import model.OptionPricing;
+
 
 /**
  * This class is the Data Layer used for queries that are related to the option expiration date. 

@@ -212,12 +212,12 @@ public class Utils {
 	}
 
 
-	private static List<Date> getTradeDays(java.util.Date startDate) {
+	private static List<Date> getTradeDays(Date startDate) {
 		
 		MarketOpenService mos = new MarketOpenService();		
-		return mos.getTradeDates(startDate);	
-	}	
-	
+		return mos.getTradeDates();
+	}
+
 	private static List<Date> getTradeDays() {
 		
 		MarketOpenService mos = new MarketOpenService();		

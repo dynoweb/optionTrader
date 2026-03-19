@@ -77,7 +77,7 @@ public class TradeProperties {
 	public static double SPREAD_WIDTH = 10;
 	
 	// Close trade properties
-	public static double PROFIT_TARGET = 0.25;  // 0.50 - 50% of max potential
+	public static double PROFIT_TARGET = 0.50;  // 0.50 - 50% of max potential
 	public static double MAX_LOSS = 0;  // .30 30%, 2.0 - 200%
 	public static double CLOSE_DELTA_TARGET = 0.0;
 	public static int CLOSE_DTE = 0;	// 0 is the default, 21 days seems to work well with 45 DTE opens
