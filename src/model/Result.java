@@ -33,6 +33,8 @@ public class Result implements Serializable {
 	private double creditPerTrade;
 
 	private int dte;
+	
+	private int dte2;
 
 	@Column(name="max_dd")
 	private double maxDd;
@@ -125,6 +127,14 @@ public class Result implements Serializable {
 
 	public void setDte(int dte) {
 		this.dte = dte;
+	}
+
+	public int getDte2() {
+		return this.dte2;
+	}
+
+	public void setDte2(int dte2) {
+		this.dte2 = dte2;
 	}
 
 	public double getMaxDd() {

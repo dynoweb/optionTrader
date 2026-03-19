@@ -20,11 +20,10 @@ public class OptionPricing implements Serializable {
 	private static final long serialVersionUID = 1L;
 
 	@Id
-	@GeneratedValue(strategy=GenerationType.AUTO)
+	@GeneratedValue(strategy=GenerationType.IDENTITY)
 	private int id;
 
-	@Lob
-	@Column(name="`*`")
+	@Column(name="`*`", length = 10)
 	private String _asterisk;
 
 	@Column(name="`adjusted stock close price`")
@@ -34,13 +33,11 @@ public class OptionPricing implements Serializable {
 
 	private double bid;
 
-	@Lob
 	@Column(name="`call/put`")
 	private String call_put;
 
 	private double delta;
 
-	@Lob
 	private String exchange;
 
 	@Temporal(TemporalType.DATE)
@@ -56,7 +53,6 @@ public class OptionPricing implements Serializable {
 	@Column(name="`open interest`")
 	private int open_interest;
 
-	@Lob
 	@Column(name="`option symbol`")
 	private String option_symbol;
 
@@ -67,10 +63,8 @@ public class OptionPricing implements Serializable {
 
 	private double strike;
 
-	@Lob
 	private String style;
 
-	@Lob
 	private String symbol;
 
 	private double theta;

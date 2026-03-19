@@ -44,12 +44,12 @@ import model.service.TradeService;
  * come at a cost of excess risk. The Sharpe ratio will help you determine if it is an appropriate increase in risk for 
  * the higher return or not. Generally, a ratio of 1 or greater is good, 2 or greater is very good, and 3 and up is great.
  * 
- * 		(Profit per Month – risk free Rate of Return) / standard deviation of monthly profits
+ * 		(Profit per Month ï¿½ risk free Rate of Return) / standard deviation of monthly profits
  * 
  * Note:
  * 
- *  · NinjaTrader presets "risk free Rate of Return" to a value of zero
- *  · In the event that there is only 1 month of trade history or less, there is insufficient data to calculate the 
+ *  ï¿½ NinjaTrader presets "risk free Rate of Return" to a value of zero
+ *  ï¿½ In the event that there is only 1 month of trade history or less, there is insufficient data to calculate the 
  *    monthly standard deviation of profits in which event, the Sharpe Ratio is set to a value of 1
  *      
  * 
@@ -73,6 +73,8 @@ public class Report {
 
 		double longDelta = 0.0;
 		double netProfit = 0.0;
+		double grossProfit = 0.0;
+		double grossLoss = 0.0;
 		double grossRisk = 0.0;
 		double grossCredit = 0.0;
 		double maxProfit = Double.MIN_VALUE;;
@@ -101,6 +103,11 @@ public class Report {
 		for (Trade trade : trades) {
 
 			numberOfTrades++;
+			if (trade.getProfit() > 0) {
+				grossProfit += trade.getProfit();
+			} else {
+				grossLoss += Math.abs(trade.getProfit());
+			}
 			netProfit += trade.getProfit();
 			maxProfit = Math.max(maxProfit, netProfit);
 			drawDown = netProfit-maxProfit;
@@ -141,10 +148,11 @@ public class Report {
 		lines.add("<tbody></TABLE>");
 		lines.add("<br/><h3>Trades: " + numberOfTrades + "</h3>");
 
-		calculateTradeResults(shortDelta, longDelta, nearDte, profitTarget, maxLoss, lines, netProfit, Math.abs(grossRisk), Math.abs(grossCredit), maxDD, numberOfTrades,
+		calculateTradeResults(shortDelta, longDelta, nearDte, farDte, profitTarget, maxLoss, lines, netProfit, Math.abs(grossRisk), Math.abs(grossCredit), maxDD, numberOfTrades,
 				profitableTrades, daysInTrade, spreadWidth, closeDte);
 		
-		lines.add("<h3>Net Profit: $" + Utils.round(netProfit,2) + "</h3></CENTER>");
+		lines.add("<h3>Net Profit: $" + Utils.round(netProfit,2) + "</h3>");
+		lines.add("<h3>Profit Factor: " + Utils.round(grossProfit/grossLoss,3) + "</h3></CENTER>");
 		lines.add("</BODY></HTML>");
 		
 		String prefix = "CAL_";
@@ -290,7 +298,8 @@ public class Report {
 		lines.add("<tbody></TABLE>");
 		lines.add("<br/><h3>Trades: " + numberOfTrades + "</h3>");
 		
-		calculateTradeResults(shortDelta, longDelta, dte, profitTarget, stopLoss, lines, netProfit, grossRisk, grossCredit, 
+		int dte2 = 0; 
+		calculateTradeResults(shortDelta, longDelta, dte, dte2, profitTarget, stopLoss, lines, netProfit, grossRisk, grossCredit, 
 				maxDD, numberOfTrades,	profitableTrades, daysInTrade, spreadWidth);
 		
 		lines.add("<h3>Net Profit: $" + Utils.round(netProfit,2) + "</h3></CENTER>");
@@ -312,15 +321,15 @@ public class Report {
 		}
 	}
 
-	private static void calculateTradeResults(double shortDelta, double longDelta, int dte, double profitTarget, double stopLoss,
+	private static void calculateTradeResults(double shortDelta, double longDelta, int dte, int dte2, double profitTarget, double stopLoss,
 			List<String> lines, double netProfit, double grossRisk, double grossCredit, double maxDD, int numberOfTrades,
 			int profitableTrades, int daysInTrade, double spreadWidth) {
 		
-		calculateTradeResults(shortDelta, longDelta, dte, profitTarget, stopLoss, lines, netProfit, grossRisk, grossCredit, maxDD, numberOfTrades,
+		calculateTradeResults(shortDelta, longDelta, dte, dte2, profitTarget, stopLoss, lines, netProfit, grossRisk, grossCredit, maxDD, numberOfTrades,
 				profitableTrades, daysInTrade, spreadWidth, TradeProperties.CLOSE_DTE);
 	}
 	
-	private static void calculateTradeResults(double shortDelta, double longDelta, int dte, double profitTarget, double stopLoss, 
+	private static void calculateTradeResults(double shortDelta, double longDelta, int dte, int dte2, double profitTarget, double stopLoss, 
 			List<String> lines, double netProfit, double grossRisk, double grossCredit, double maxDD, int numberOfTrades, 
 			int profitableTrades, int daysInTrade, double spreadWidth, 
 			int closeDte) {
@@ -354,12 +363,12 @@ public class Report {
 			lines.add("<h3>        Max Drawdown: $" + Utils.round(maxDD, 2) + "</h3>");
 		}		
 
-		captureResults(shortDelta, longDelta, spreadWidth, dte, profitTarget, stopLoss, 
+		captureResults(shortDelta, longDelta, spreadWidth, dte, dte2, profitTarget, stopLoss, 
 				netProfit, maxDD, numberOfTrades, avgDaysInTrade, avgReturnPerTrade, 
 				creditPerTrade, percentProfitable, profitPerDay, profitPerTrade, closeDte);
 	}
 
-	private static void captureResults(double shortDelta, double longDelta, double spreadWidth, int dte, double profitTarget, double stopLoss, 
+	private static void captureResults(double shortDelta, double longDelta, double spreadWidth, int dte, int dte2, double profitTarget, double stopLoss, 
 			double netProfit, double maxDD,	int numberOfTrades, double avgDaysInTrade, double avgReturnPerTrade, 
 			double creditPerTrade,	double percentProfitable, double profitPerDay, double profitPerTrade, int closeDte) {
 		
@@ -367,7 +376,7 @@ public class Report {
 		em = emf.createEntityManager();
 		em.getTransaction().begin();		
 
-		Result result = ResultService.getRecord(dte, shortDelta, longDelta, spreadWidth, profitTarget, stopLoss, closeDte);
+		Result result = ResultService.getRecord(dte, dte2, shortDelta, longDelta, spreadWidth, profitTarget, stopLoss, closeDte);
 		if (result == null) {
 		 	result = new Result();
 		}
@@ -376,6 +385,7 @@ public class Report {
 		result.setCloseDte(closeDte);
 		result.setCreditPerTrade(creditPerTrade);
 		result.setDte(dte);
+		result.setDte2(dte2);
 		result.setMaxDd(Utils.round(maxDD, 2));
 		result.setNetProfit(Utils.round(netProfit, 2));
 		result.setProfitable(percentProfitable);
@@ -435,34 +445,36 @@ public class Report {
 		List<Trade> trades = TradeService.getTrades();
 		for (Trade trade : trades) {
 
-			//System.out.println("Id: " + trade.getId());
-			numberOfTrades++;
-			netProfit += trade.getProfit();
-			maxProfit = Math.max(maxProfit, netProfit);
-			drawDown = netProfit-maxProfit;
-			maxDD = Math.min(maxDD, drawDown);
-			grossCredit += trade.getOpeningCost();
-			profitableTrades = trade.getProfit() > 0 ? profitableTrades + 1 : profitableTrades; 
-			
-			DateTime jOpenDate = new DateTime(trade.getExecTime());
-			DateTime jCloseDate = new DateTime(trade.getCloseDate());
-			Days days = Days.daysBetween(jOpenDate, jCloseDate);
-			daysInTrade += days.getDays();
-			
-			//grossRisk += (spreadWidth * 100 - trade.getOpeningCost());
-			
-			lines.add("  <TR>"
-					+ "<TD>"+Utils.asMMddYY(trade.getExecTime())+"</TD><TD>"+Utils.asMMddYY(trade.getCloseDate())+"</TD>"
-					+ "<TD>"+Utils.asMMddYY(trade.getExp())+"</TD><TD>"+trade.getClose_status()+"</TD>"
-					+ "<TD>"+(trade.getOpeningCost())+"</TD><TD>"+trade.getClosingCost()+"</TD><TD>"+trade.getProfit()+"</TD>"
-					+ "<TD>"+Utils.round(netProfit, 2)+"</TD><TD>"+Utils.round(drawDown,2)+"</TD>"
-					+ "</TR>");			
+			if (trade.getCloseDate() != null) {
+				//System.out.println("Id: " + trade.getId());
+				numberOfTrades++;
+				netProfit += trade.getProfit();
+				maxProfit = Math.max(maxProfit, netProfit);
+				drawDown = netProfit-maxProfit;
+				maxDD = Math.min(maxDD, drawDown);
+				grossCredit += trade.getOpeningCost();
+				profitableTrades = trade.getProfit() > 0 ? profitableTrades + 1 : profitableTrades; 
+				
+				DateTime jOpenDate = new DateTime(trade.getExecTime());
+				DateTime jCloseDate = new DateTime(trade.getCloseDate());
+	
+				int days = Days.daysBetween(jOpenDate, jCloseDate).getDays();
+				daysInTrade += days;
+				
+				lines.add("  <TR>"
+						+ "<TD>"+Utils.asMMddYY(trade.getExecTime())+"</TD><TD>"+Utils.asMMddYY(trade.getCloseDate())+"</TD>"
+						+ "<TD>"+Utils.asMMddYY(trade.getExp())+"</TD><TD>"+trade.getClose_status()+"</TD>"
+						+ "<TD>"+(trade.getOpeningCost())+"</TD><TD>"+trade.getClosingCost()+"</TD><TD>"+trade.getProfit()+"</TD>"
+						+ "<TD>"+Utils.round(netProfit, 2)+"</TD><TD>"+Utils.round(drawDown,2)+"</TD>"
+						+ "</TR>");
+			}
 		}
 		
 		lines.add("<tbody></TABLE>");
 		lines.add("<br/><h3>Trades: " + numberOfTrades + "</h3>");
 
-		calculateTradeResults(shortDelta, longDelta, dte, profitTarget, stopLoss, lines, netProfit, grossRisk, grossCredit, maxDD, numberOfTrades,
+		int dte2 = 0; 
+		calculateTradeResults(shortDelta, longDelta, dte, dte2, profitTarget, stopLoss, lines, netProfit, grossRisk, grossCredit, maxDD, numberOfTrades,
 				profitableTrades, daysInTrade, spreadWidth);
 
 		lines.add("<h3>Net Profit: $" + Utils.round(netProfit,2) + "</h3></CENTER>");
@@ -543,7 +555,8 @@ public class Report {
 		lines.add("<tbody></TABLE>");
 		lines.add("<br/><h3>Trades: " + numberOfTrades + "</h3>");
 
-		calculateTradeResults(shortDelta, longDelta, dte, profitTarget, stopLoss, lines, netProfit, grossRisk, grossCredit, maxDD, numberOfTrades,
+		int dte2 = 0; 
+		calculateTradeResults(shortDelta, longDelta, dte, dte2, profitTarget, stopLoss, lines, netProfit, grossRisk, grossCredit, maxDD, numberOfTrades,
 				profitableTrades, daysInTrade, spreadWidth);
 		
 		lines.add("<h3>Net Profit: $" + Utils.round(netProfit,2) + "</h3></CENTER>");
@@ -637,7 +650,8 @@ public class Report {
 		double profitTarget = 0; 
 		double stopLoss = 0; 
 		
-		calculateTradeResults(shortDelta, longDelta, dte, profitTarget, stopLoss, lines, netProfit, grossRisk, grossCredit, 
+		int dte2 = 0; 
+		calculateTradeResults(shortDelta, longDelta, dte, dte2, profitTarget, stopLoss, lines, netProfit, grossRisk, grossCredit, 
 				maxDD, numberOfTrades,	profitableTrades, daysInTrade, spreadWidth);
 		
 		lines.add("<h3>Net Profit: $" + Utils.round(netProfit, 2) + "</h3>");

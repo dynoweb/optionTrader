@@ -1,4 +1,5 @@
 package main;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -20,11 +21,16 @@ import model.service.TradeService;
 
 
 public class MainBackTester {
+	
+	public static Date startDate;
 
 	public static void main(String[] args) {
 		
-		MainBackTester bt = new MainBackTester();
+		Calendar cal = Calendar.getInstance();   // today
+		cal.add(Calendar.YEAR, -1);             // subtract 10 years
+		startDate = cal.getTime();
 		
+		MainBackTester bt = new MainBackTester();		
 		
 //		SpxService ss = new SpxService();
 //		List<Date> expirations = ss.getExpirationDates(openTradeDate);
@@ -81,17 +87,17 @@ public class MainBackTester {
 
 		boolean useWeekly = true;
 		//int[] dtes = { 16,23,30,37,44 };	// trade results not real promising for these periods
-		//int[] dtes = { 51,58,65,72,79 };
-		int[] dtes = { 70 };
+		int[] dtes = { 51,58,65,72,79 };
+		//int[] dtes = { 51 };
 		//int[] dtes = {TradeProperties.OPEN_DTE};
 
 		//double[] lowerDeltas = { TradeProperties.LOWER_DELTA };
 		//double[] upperDeltas = { TradeProperties.UPPER_DELTA };
-		//double[] lowerDeltas = { 0.05, 0.10, 0.15, 0.20, 0.25, 0.30 };
-		//double[] upperDeltas = { 0.50, 0.55, 0.60, 0.65, 0.70, 0.75 };
-		double[] lowerDeltas = { 0.15 };
-//		double[] upperDeltas = { 0.55, 0.60, 0.70 };
-		double[] upperDeltas = { 0.65 };
+		double[] lowerDeltas = { 0.05, 0.10, 0.15, 0.20, 0.25, 0.30 };
+		double[] upperDeltas = { 0.50, 0.55, 0.60, 0.65, 0.70, 0.75 };
+		//double[] lowerDeltas = { 0.20 };
+		//double[] upperDeltas = { 0.55, 0.60, 0.70 };
+		//double[] upperDeltas = { 0.70 };
 		
 		for (double lowerDelta : lowerDeltas) {
 			for (double upperDelta : upperDeltas) {
@@ -125,39 +131,61 @@ public class MainBackTester {
 	 */
 	private void calendarBackTest() {
 		
-		double[] shortDeltas = {TradeProperties.SHORT_DELTA};
-		//double[] deltas = {0.45, 0.4, 0.35, 0.3, 0.25, 0.20, 0.15, 0.1};
-		//double[] shortDeltas = {0.10};
+		//double[] shortDeltas = {TradeProperties.SHORT_DELTA};
+		double[] shortDeltas = {0.6};
+		//double[] shortDeltas = {0.4, 0.5, 0.6};
+		//double[] shortDeltas = {0.2, 0.3, 0.4, 0.5};
+		//double[] shortDeltas = {0.1, 0.16, 0.2, 0.3, 0.4, 0.5};
+		//double[] shortDeltas = {0.2, 0.3, 0.4, 0.5, 0.6};  
 		
 		// Profit target is in percentage
-		double[] profitTargets = {TradeProperties.PROFIT_TARGET};
+		//double[] profitTargets = {TradeProperties.PROFIT_TARGET};
 		//double[] profitTargets = {0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5};
 		//double[] profitTargets = {0.1, 0.15, 0.2, 0.25, 0.3};
 		//double[] profitTargets = {0.35, 0.4, 0.45, 0.5};
+		//double[] profitTargets = {0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0};
+		double[] profitTargets = {0.5};
+		//double[] profitTargets = {0.3, 0.4, 0.5, 0.6};
+		//double[] profitTargets = {0.08, 0.09, 0.11, 0.12, 0.13};
 		
 		int[] closeDtes = {TradeProperties.CLOSE_DTE};
+		//int[] closeDtes = {0,1,2,3,4,5,6,7,8};
+		//int[] closeDtes = {0,1,2};
 		
+		// TODO - maxLoss doesn't appear to work for some reason for calendars, I don't see anything except 0 in the results table
 		// maxLoss is in percentage
 		double[] maxLosses = {TradeProperties.MAX_LOSS};
 		//double[] maxLosses = { 0.50 };
 		//double[] maxLosses = {0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5};
 		
-		int nearDte = 9;
-		int farDte = 16;
-		String putCall = "C";
+		int nearDte = 7;
+		int farDte = 14;
+//		int nearDte = 9;
+//		int farDte = 16;
+		//int nearDte = 11;
+		//int farDte = 18;
+		String putCall = "P";
 		
-		for (double shortDelta : shortDeltas) {
-			
-			for (double maxLoss : maxLosses) {
+		if (closeDtes[0] >= nearDte) {
+			System.err.println("closeDtes needs to be less than nearDte, try using closesDtes=0");
+			return;
+		}
+		
+		for (int closeDte : closeDtes) {
+		
+			for (double shortDelta : shortDeltas) {
 				
-				for (double profitTarget : profitTargets) {
+				for (double maxLoss : maxLosses) {
 					
-					DbService.resetDataBase();
-					
-					OpenTrade.openCalendar(nearDte, farDte, shortDelta, putCall);
-					CloseTrade.closeTrades(profitTarget, closeDtes[0], maxLoss);
-					
-					Report.buildCalendarReport(profitTarget, maxLoss, nearDte, farDte, closeDtes[0], shortDelta, putCall);
+					for (double profitTarget : profitTargets) {
+						
+						DbService.resetDataBase();
+						
+						OpenTrade.openCalendar(nearDte, farDte, shortDelta, putCall);
+						CloseTrade.closeTrades(profitTarget, closeDte, maxLoss);
+						
+						Report.buildCalendarReport(profitTarget, maxLoss, nearDte, farDte, closeDte, shortDelta, putCall);
+					}
 				}
 			}
 		}
@@ -252,26 +280,30 @@ public class MainBackTester {
 	
 		boolean useWeekly = true;
 		
-		double[] spreadWidths = { TradeProperties.SPREAD_WIDTH }; 
+		//double[] spreadWidths = { TradeProperties.SPREAD_WIDTH }; 
 		//double[] spreadWidths = { 5, 10, 25, 50, 100 };
 		//double[] spreadWidths = { 1.0, 2.0, 3.0, 5.0, 10.0 };
 		//double[] spreadWidths = { 3.0, 5.0 };
-		//double[] spreadWidths = { 10, 20, 50 };				// good for RUT
+		double[] spreadWidths = { 25 };
+		//double[] spreadWidths = { 10, 25, 50, 100 };				// good for RUT
 		
-		double[] shortDeltas = {TradeProperties.SHORT_DELTA};
+		//double[] shortDeltas = {TradeProperties.SHORT_DELTA};
 		//double[] shortDeltas = {0.1, 0.1587, 0.2, 0.3, 0.35};
 		//double[] shortDeltas = {0.1, 0.1587, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45};
 		//double[] shortDeltas = {0.0228, 0.0668, 0.1, 0.1587, 0.2, 0.25};
 		//double[] shortDeltas = {0.4, 0.45};
-		//double[] shortDeltas = {0.1587, 0.2, 0.3};
+		//double[] shortDeltas = {0.1587, 0.2};
+		double[] shortDeltas = {0.1587};
 		
-		double[] longDeltas = {TradeProperties.LONG_DELTA};
+		//double[] longDeltas = {TradeProperties.LONG_DELTA};
+		double[] longDeltas = {0.0};
 		//double[] longDeltas = {0.1, 0.05};
 		
-		int[] openDte = {TradeProperties.OPEN_DTE};
+		//int[] openDte = {TradeProperties.OPEN_DTE};
 		//int[] openDte = {120, 60, 45};
 		//int[] openDte = {7,14,28,45,60,120};
 		//int[] openDte = {28,45,60,120};
+		int[] openDte = {7};
 		
 		for (int dte :  openDte) {
 			
@@ -290,7 +322,7 @@ public class MainBackTester {
 						
 						Map<Date, Date> potentialTrades = null;
 						if (useWeekly) {
-							potentialTrades = Utils.getPotentialWeeklyTrades(dte);
+							potentialTrades = Utils.getPotentialWeeklyTrades(dte, startDate);
 						} else {
 							potentialTrades = Utils.getPotentialTrades(dte);
 						}
@@ -424,7 +456,7 @@ public class MainBackTester {
 		
 		int[] openDte = {TradeProperties.OPEN_DTE};
 		//int[] openDte = {7, 14, 28, 45};
-		//int[] openDte = {8, 9};
+		//int[] openDte = {7, 8, 9, 17};
 		
 		double[] profitTargets = {TradeProperties.PROFIT_TARGET};
 		//double[] profitTargets = {0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9}; 
@@ -466,28 +498,29 @@ public class MainBackTester {
 
 	private void shortPutSpreadTest() {
 		
-		double[] spreadWidths = { TradeProperties.SPREAD_WIDTH }; 
-		//double[] spreadWidths = { 10, 25, 50, 100 };	// good for SPX
+		//double[] spreadWidths = { TradeProperties.SPREAD_WIDTH }; 
+		double[] spreadWidths = { 10, 25, 50, 100 };	// good for SPX
 		//double[] spreadWidths = { 1.0, 2.0, 3.0, 5.0, 10.0 };	// good for SPY
 		//double[] spreadWidths = { 1.0, 2.0, 3.0, 5.0 };
 		//double[] spreadWidths = { 10, 20, 50 };				// good for RUT
 		//double[] spreadWidths = { 100 };
 		
-		double[] shortDeltas = {TradeProperties.SHORT_DELTA};
-		//double[] deltas = {0.0228, 0.0668, 0.1, 0.1587, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45};
-		//double[] deltas = {0.1, 0.1587, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45};
-		//double[] deltas = {0.0668, 0.1, 0.1587, 0.2, 0.25, 0.3};
-		//double[] deltas = {0.0228, 0.0668, 0.1, 0.1587, 0.2, 0.25, 0.3};
-		//double[] deltas = {0.2, 0.25, 0.35, 0.4, 0.45};
-		//double[] deltas = {0.1, 0.1587, 0.2, 0.25, 0.3};
-		//double[] deltas = {0.1, 0.1587, 0.2, 0.3};
-		//double[] deltas = {0.0228, 0.0668};
-		//double[] deltas = {0.25};
+		//double[] shortDeltas = {TradeProperties.SHORT_DELTA};
+		//double[] shortDeltas = {0.0228, 0.0668, 0.1, 0.1587, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45};
+		//double[] shortDeltas = {0.1, 0.1587, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45};
+		//double[] shortDeltas = {0.0668, 0.1, 0.1587, 0.2, 0.25, 0.3};
+		//double[] shortDeltas = {0.0228, 0.0668, 0.1, 0.1587, 0.2, 0.25, 0.3};
+		//double[] shortDeltas = {0.2, 0.25, 0.35, 0.4, 0.45};
+		//double[] shortDeltas = {0.1, 0.1587, 0.2, 0.25, 0.3};
+		double[] shortDeltas = {0.1, 0.1587, 0.2, 0.3};
+		//double[] shortDeltas = {0.0228, 0.0668};
+		//double[] shortDeltas = {0.25};
 
 		double longDelta = 0;
 
-		int[] openDte = {TradeProperties.OPEN_DTE};
+		//int[] openDte = {TradeProperties.OPEN_DTE};
 		//int[] openDte = {7, 14, 28, 45};
+		int[] openDte = {7, 14, 21};
 		//int[] openDte = {7, 14, 21, 28, 45};
 		//int[] openDte = {28, 45};
 		

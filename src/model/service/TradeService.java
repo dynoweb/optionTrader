@@ -496,6 +496,25 @@ public class TradeService {
 		em.close();
 		emf.close();
 	}
+	
+	/**
+	 * May need to add this to remove any non-closed trades.  This should correct the problem where the trade was open after all the data was read.
+	 */
+	public static void removeOpenTrades() {
+
+		EntityManagerFactory emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
+		EntityManager em = emf.createEntityManager();
+		
+		em.getTransaction().begin();
+		
+		//em.persist(trade);
+		
+		em.getTransaction().commit();
+		em.close();
+		emf.close();
+	}
+	
+	
 
 //	private static void recordShortPutSpread(VerticalSpread putSpread) {
 //		

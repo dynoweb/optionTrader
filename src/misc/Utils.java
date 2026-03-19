@@ -181,9 +181,18 @@ public class Utils {
 	 */
 	public static Map<Date, Date> getPotentialWeeklyTrades(int dte) {				
 		
+        Calendar cal = Calendar.getInstance();   // today
+        cal.add(Calendar.YEAR, -10);             // subtract 10 years
+        Date start_date = cal.getTime();        // convert back to java.util.Date
+        
+		return getPotentialWeeklyTrades(dte, start_date);
+	}
+
+	public static Map<Date, Date> getPotentialWeeklyTrades(int dte, java.util.Date startDate) {				
+		
 		Map<Date, Date> tradeDates = new LinkedHashMap<Date, Date>();
 		List<Date> expirations = getWeeklyExpirations();
-		List<Date> tradeDays = getTradeDays();
+		List<Date> tradeDays = getTradeDays(startDate);
 		
 		if (tradeDays.size() > 0) {
 			Date firstTradeDay = tradeDays.get(0);
@@ -202,6 +211,13 @@ public class Utils {
 		return tradeDates;
 	}
 
+
+	private static List<Date> getTradeDays(java.util.Date startDate) {
+		
+		MarketOpenService mos = new MarketOpenService();		
+		return mos.getTradeDates(startDate);	
+	}	
+	
 	private static List<Date> getTradeDays() {
 		
 		MarketOpenService mos = new MarketOpenService();		

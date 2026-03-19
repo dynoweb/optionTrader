@@ -186,7 +186,21 @@ public class CloseTrade {
 			// Current trade date under consideration
 			DateTime jTradeDate = new DateTime(shortOpt.getTrade_date());
 			
-			OptionPricing longOpt = OptionPricingService.getRecord(shortOpt.getTrade_date(), openingLongLeg.getExp(), openingLongLeg.getStrike(), openingLongLeg.getPutCallType());
+			OptionPricing longOpt = null;
+			try {
+				longOpt = OptionPricingService.getRecord(shortOpt.getTrade_date(), openingLongLeg.getExp(), openingLongLeg.getStrike(), openingLongLeg.getPutCallType());
+			} catch (Exception ex) {
+				System.err.println("It's possible that the chain doesn't have enough strikes to process");
+			}
+
+			// this is a bad work around for the case where a strike isn't available on a trade date, we'll use the prior strike values
+			if (longOpt == null) {
+				int index = optPriceList.indexOf(shortOpt);
+				if (index > 0) {
+					shortOpt = optPriceList.get(index - 1);
+					longOpt = OptionPricingService.getRecord(shortOpt.getTrade_date(), openingLongLeg.getExp(), openingLongLeg.getStrike(), openingLongLeg.getPutCallType());
+				}
+			}
 			
 			double closingCost = calcClosingCostOfCalendar(shortOpt, longOpt);
 			
@@ -201,7 +215,7 @@ public class CloseTrade {
 				// Closing cost should be a positive number since we are selling it
 				if (closingCost > Math.abs(trade.getOpeningCost() * (1 + profitTarget))) {
 					
-					System.out.println(Utils.asMMddYY(shortOpt.getTrade_date()) + " Profit Target - Closing Cost: " + closingCost);  
+					System.out.println(Utils.asMMddYY(shortOpt.getTrade_date()) + " Profit Target - Opening Cost: " + trade.getOpeningCost() + " Closing Cost: " + closingCost);  
 					trade.setClosingCost(closingCost);
 					trade.setProfit(Utils.round(trade.getClosingCost() + trade.getOpeningCost(), 2));
 					trade.setClose_status((profitTarget * 100) + "% PROFIT TARGET");
@@ -267,7 +281,7 @@ public class CloseTrade {
 		double itmLongCost = 0;
 		double stockPrice = shortOpt.getAdjusted_stock_close_price();
 		// - put logic hasn't been verified
-		if (shortOpt.getCall_put().equalsIgnoreCase("PUT")) {	
+		if ((shortOpt.getCall_put().equalsIgnoreCase("PUT")) || (shortOpt.getCall_put().equalsIgnoreCase("P"))) {	
 			itmShortCost = stockPrice < shortOpt.getStrike() ? stockPrice - shortOpt.getStrike() : 0.0;
 			if (itmShortCost != 0.0) {
 				itmShortCost = Math.min(itmShortCost, -1 * shortOpt.getMean_price());
@@ -284,7 +298,7 @@ public class CloseTrade {
 		}
 		
 		// will be positive if ITM - not sure about this - put logic hasn't been verified
-		if (shortOpt.getCall_put().equalsIgnoreCase("PUT")) {
+		if ((shortOpt.getCall_put().equalsIgnoreCase("PUT")) || (shortOpt.getCall_put().equalsIgnoreCase("P"))) {
 			itmLongCost = stockPrice < longOpt.getStrike() ? longOpt.getStrike() - stockPrice: 0.0;
 			if (itmLongCost != 0.0) {
 				itmLongCost = Math.max(itmLongCost, longOpt.getMean_price());
@@ -1258,11 +1272,11 @@ public class CloseTrade {
 							shortOpt.getMean_price() * openingShortLeg.getQty() * 100 + 
 							longLeg2.getMean_price() * openingLongLeg2.getQty() * 100 + fees, 2);
 					
-					System.out.println(Utils.asMMddYY(shortOpt.getTrade_date()) + " Delta stop - Closing Cost: " + closingCost);  
 					trade.setClosingCost(closingCost);
 					trade.setProfit(Utils.round(trade.getClosingCost() + trade.getOpeningCost(), 2));
 					trade.setClose_status(Math.abs(shortOpt.getDelta()) < lowerDelta ? "Low Delta Exit" : "High Delta Exit");
 					trade.setCloseDate(shortOpt.getTrade_date());
+					System.out.println(Utils.asMMddYY(shortOpt.getTrade_date()) + " Delta stop - Closing Cost: " + closingCost + " Reason: " + trade.getClose_status());  
 					
 					em.merge(trade);									
 					

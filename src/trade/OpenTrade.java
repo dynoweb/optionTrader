@@ -510,12 +510,22 @@ public class OpenTrade {
 			DateTime jNearExpDate = new DateTime(jOpenDate.plusDays(nearDte)); 
 			DateTime jFarExpDate = new DateTime(jOpenDate.plusDays(farDte));
 			
-			// TODO - TRADE FILTER - remove me to clear filter, this is here to make it run faster
+			// TODO - TRADE FILTER - remove this to clear filter, this is here to make it run faster
 //			if (jOpenDate.getYear() != 2015) { // || jOpenDate.getMonthOfYear() == 18) { // || jOpenDate.getDayOfMonth() != 22) {
 //				continue;
 //			}
-//			if (jOpenDate.getYear() < 2018) {
-//				continue;	// skip these years				
+			if (jOpenDate.getYear() < 2023) { // || jOpenDate.getMonthOfYear() != 4) {
+				continue; 
+			} 
+//			else if (jOpenDate.getYear() < 2023) { 
+//				// for some reason this didn't exclude these trades, so I just did 2024
+//				if (jOpenDate.getMonthOfYear() == 7) {
+//					if (jOpenDate.getDayOfMonth() == 23 || 
+//						jOpenDate.getDayOfMonth() == 28)
+//					{
+//						continue;	// skip these years				
+//					}
+//				}
 //			}
 			
 			// find short expiration

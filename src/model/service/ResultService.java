@@ -14,7 +14,7 @@ import model.Result;
 public class ResultService {
 
 	
-	public static Result getRecord(int dte, double shortDelta, double longDelta, double width, double profitTarget, double stopLoss, int closeDte) {
+	public static Result getRecord(int dte, int dte2, double shortDelta, double longDelta, double width, double profitTarget, double stopLoss, int closeDte) {
 		
 		EntityManagerFactory emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
 		EntityManager em = emf.createEntityManager();
@@ -22,7 +22,8 @@ public class ResultService {
 		// Note: table name refers to the Entity Class and is case sensitive
 		//       field names are property names in the Entity Class
 		Query query = em.createQuery("select res from Result res where "
-				+ "res.dte = :dte " 
+				+ "res.dte = :dte "
+				+ "and res.dte2 = :dte2 " 
 				+ "and res.shortDelta = :shortDelta "	
 				+ "and res.longDelta = :longDelta "	
 				+ "and res.width = :width "
@@ -34,6 +35,7 @@ public class ResultService {
 				);
 		
 		query.setParameter("dte", dte);
+		query.setParameter("dte2", dte2);
 		query.setParameter("shortDelta", shortDelta);
 		query.setParameter("longDelta", longDelta);
 		query.setParameter("width", width);
@@ -70,7 +72,7 @@ public class ResultService {
 		emf = Persistence.createEntityManagerFactory("JPAOptionsTrader");
 		em = emf.createEntityManager();
 		
-		Result result = ResultService.getRecord(7, 0.1, 0, 50.0, 0.0, 0.0, 0);
+		Result result = ResultService.getRecord(7, 0, 0.1, 0, 50.0, 0.0, 0.0, 0);
 		
 		if (result != null) {
 			// test edit

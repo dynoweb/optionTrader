@@ -175,6 +175,7 @@ public class OptionPricingService {
 			optionPriceRecord = (OptionPricing) query.getSingleResult();
 		} catch (Exception ex) {
 			System.err.println(ex.getMessage());
+			// ran into this when there were not enough option strikes to match the query. 
 			System.err.println(" tradeDate: " + Utils.asMMddYY(tradeDate)+ " expiration: " + Utils.asMMddYY(expiration) + " strike: " + strike + " Call/Put: " + callPut);
 			ex.printStackTrace();
 			throw ex;

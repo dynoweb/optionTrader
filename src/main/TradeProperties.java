@@ -22,11 +22,12 @@ public class TradeProperties {
 			this.tradeName = tradeName;
 		}
 	}
+	
 
-	public static TradeType tradeType = TradeType.SHORT_PUT;  
+	public static TradeType tradeType = TradeType.IRON_CONDOR;  
 	
 	// Name of the Entity Class
-//	public static final String SYMBOL_FOR_QUERY = "Aapl";
+//	public static final String SYMBOL_FOR_QUERY = "Aapl";	// clean till 2/1/21
 //	public static final String SYMBOL_FOR_QUERY = "Amd";
 //	public static final String SYMBOL_FOR_QUERY = "Amzn";
 //	public static final String SYMBOL_FOR_QUERY = "Ba";
@@ -34,31 +35,33 @@ public class TradeProperties {
 //	public static final String SYMBOL_FOR_QUERY = "Cost";
 //	public static final String SYMBOL_FOR_QUERY = "Dia";
 //	public static final String SYMBOL_FOR_QUERY = "Eem";
+//	public static final String SYMBOL_FOR_QUERY = "Etha";
 //	public static final String SYMBOL_FOR_QUERY = "Fas";
 //	public static final String SYMBOL_FOR_QUERY = "Fb";
 //	public static final String SYMBOL_FOR_QUERY = "Gld";
 //	public static final String SYMBOL_FOR_QUERY = "Goog";
+//	public static final String SYMBOL_FOR_QUERY = "Ibit";
 //	public static final String SYMBOL_FOR_QUERY = "Iwm";
 //	public static final String SYMBOL_FOR_QUERY = "Jpm";
 //	public static final String SYMBOL_FOR_QUERY = "Mcd";
 //	public static final String SYMBOL_FOR_QUERY = "Msft";
-//	public static final String SYMBOL_FOR_QUERY = "Ndx";
-//	public static final String SYMBOL_FOR_QUERY = "Nflx";
+//	public static final String SYMBOL_FOR_QUERY = "Ndx";	// clean till 2/1/21
+//	public static final String SYMBOL_FOR_QUERY = "Nflx";	// clean till 2/1/21
 //	public static final String SYMBOL_FOR_QUERY = "Qqq";
 //	public static final String SYMBOL_FOR_QUERY = "Rut";
-/////	public static final String SYMBOL_FOR_QUERY = "Rvx";
 //	public static final String SYMBOL_FOR_QUERY = "Slv";
-//	public static final String SYMBOL_FOR_QUERY = "Spx";
+	public static final String SYMBOL_FOR_QUERY = "Spx";
 //	public static final String SYMBOL_FOR_QUERY = "Spy";
 //	public static final String SYMBOL_FOR_QUERY = "Tlt";
 //	public static final String SYMBOL_FOR_QUERY = "Tna";
-	public static final String SYMBOL_FOR_QUERY = "Xsp";
+//	public static final String SYMBOL_FOR_QUERY = "Tqqq";  // clean till 2/1/21
+//	public static final String SYMBOL_FOR_QUERY = "Xsp";
 	
 	public static final String SYMBOL = SYMBOL_FOR_QUERY.toUpperCase();
 	public static final int CONTRACTS = 1;
 
 	// cost to open or close 1 contract. Being a cost it should be negative
-	public static final double COST_PER_CONTRACT_FEE = -1.00;
+	public static final double COST_PER_CONTRACT_FEE = -0.5;
 	public static final double COST_PER_STOCK_TRADE_FEE = 0.0;
 
 	// 68.27%, 95.45% and 99.73% of the values lie within one, two and three standard deviations of the mean
@@ -68,13 +71,13 @@ public class TradeProperties {
 	// Delta = 0.0228 - 2 SD
 	//
 	// Open trade properties
-	public static double SHORT_DELTA = 0.25;
-	public static double LONG_DELTA = 0.0;
-	public static int OPEN_DTE = 21;
+	public static double SHORT_DELTA = 0.5;
+	public static double LONG_DELTA = 0.10;
+	public static int OPEN_DTE = 9;
 	public static double SPREAD_WIDTH = 10;
 	
 	// Close trade properties
-	public static double PROFIT_TARGET = 0.0;  // 0.50 - 50% of max potential
+	public static double PROFIT_TARGET = 0.25;  // 0.50 - 50% of max potential
 	public static double MAX_LOSS = 0;  // .30 30%, 2.0 - 200%
 	public static double CLOSE_DELTA_TARGET = 0.0;
 	public static int CLOSE_DTE = 0;	// 0 is the default, 21 days seems to work well with 45 DTE opens

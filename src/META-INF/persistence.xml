@@ -12,10 +12,12 @@
 		<class>model.Cost</class>
 		<class>model.Dia</class>
 		<class>model.Eem</class>
+		<class>model.Etha</class>
 		<class>model.Fas</class>
 		<class>model.Fb</class>
 		<class>model.Gld</class>
 		<class>model.Goog</class>
+		<class>model.Ibit</class>
 		<class>model.Iwm</class>
 		<class>model.Jpm</class>
 		<class>model.Mcd</class>
@@ -39,8 +41,8 @@
 		<class>model.Trade</class>
 		<class>model.TradeDetail</class>
         <properties>         
-          <property name="javax.persistence.jdbc.driver" value="com.mysql.jdbc.Driver"/> 
-          <property name="javax.persistence.jdbc.url" value="jdbc:mysql://localhost:3306/optionsdb"/> 
+          <property name="javax.persistence.jdbc.driver" value="com.mysql.cj.jdbc.Driver"/> 
+          <property name="javax.persistence.jdbc.url" value="jdbc:mysql://localhost:3306/optionsdb?useSSL=false&amp;"/> 
           <property name="javax.persistence.jdbc.user" value="root"/> 
           <property name="javax.persistence.jdbc.password" value="password"/>
           
